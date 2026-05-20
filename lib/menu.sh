@@ -39,13 +39,13 @@ advanced_menu() {
       back "$(msg menu_back)")" || return 0
     case "$choice" in
       install) install_flow ;;
-      render) prompt_settings; render_files ;;
+      render) render_files ;;
       start) start_services ;;
       stop) stop_services ;;
       restart) restart_services ;;
       logs) show_logs ;;
       onepanel-preview) show_openresty_preview ;;
-      onepanel-apply) prompt_settings; apply_1panel_conf ;;
+      onepanel-apply) apply_1panel_conf ;;
       onepanel-check) check_1panel ;;
       backup) backup_installation ;;
       uninstall) uninstall_installation ;;

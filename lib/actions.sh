@@ -203,9 +203,11 @@ uninstall_installation() {
 }
 
 install_flow() {
-  if has_tui; then
-    prompt_settings
-  else
+  if ! check_settings >/dev/null; then
+    if has_form_tui; then
+      setup_wizard
+      return
+    fi
     validate_settings
   fi
   render_files
