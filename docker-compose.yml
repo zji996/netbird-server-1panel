@@ -1,0 +1,24 @@
+services:
+  dashboard:
+    image: netbirdio/dashboard:latest
+    container_name: netbird-dashboard
+    restart: unless-stopped
+    env_file:
+      - /root/netbird-docker/dashboard.env
+    ports:
+      - "127.0.0.1:18084:80"
+    depends_on:
+      - netbird-server
+
+  netbird-server:
+    image: netbirdio/netbird-server:latest
+    container_name: netbird-server
+    restart: unless-stopped
+    environment:
+      NB_DISABLE_GEOLOCATION: "true"
+    ports:
+      - "127.0.0.1:18085:80"
+      - "13478:13478/udp"
+    volumes:
+      - /root/netbird-docker/config.yaml:/etc/netbird/config.yaml:ro
+      - /root/netbird-docker/data:/var/lib/netbird

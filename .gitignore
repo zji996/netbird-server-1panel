@@ -1,0 +1,24 @@
+# Runtime secrets and state
+config.yaml
+dashboard.env
+data/
+*.db
+*.sqlite
+*.sqlite3
+*.pem
+*.key
+*.crt
+*.bak.*
+
+# Generated archives and logs
+netbird-backup-*.tar.gz
+*.log
+
+# Local test output
+.tmp/
+tmp/
+
+# Editor/OS noise
+.DS_Store
+.idea/
+.vscode/
