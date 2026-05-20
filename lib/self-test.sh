@@ -5,14 +5,19 @@ self_test() {
   local sandbox="$TMP_DIR/self-test-install"
   rm -rf "$sandbox"
   mkdir -p "$sandbox"
+  cat > "$sandbox/netbird-server.env" <<'EOF'
+NETBIRD_DOMAIN=test.example.invalid
+NETBIRD_INSTALL_DIR=/tmp/netbird-server-tui/self-test-install
+NETBIRD_DASHBOARD_PORT=28084
+NETBIRD_SERVER_PORT=28085
+NETBIRD_STUN_PORT=23478
+NETBIRD_BIND_ADDRESS=127.0.0.1
+NETBIRD_PUBLIC_SCHEME=https
+NETBIRD_PUBLIC_PORT=443
+NETBIRD_1PANEL_ROOT_CONF=/tmp/netbird-server-tui/self-test-install/root.conf
+EOF
   info "$(tf self_test_start "$sandbox")"
-  NETBIRD_INSTALL_DIR="$sandbox" \
-  NETBIRD_DOMAIN="test.example.invalid" \
-  NETBIRD_DASHBOARD_PORT="28084" \
-  NETBIRD_SERVER_PORT="28085" \
-  NETBIRD_STUN_PORT="23478" \
-  NETBIRD_1PANEL_ROOT_CONF="$sandbox/root.conf" \
-  bash "$SCRIPT_PATH" --noninteractive --install-dir "$sandbox" --domain test.example.invalid --dashboard-port 28084 --server-port 28085 --stun-port 23478 render
+  bash "$SCRIPT_PATH" --noninteractive --config "$sandbox/netbird-server.env" render
 
   bash -n "$SCRIPT_PATH"
   python3 - "$sandbox" <<'PY'
@@ -39,8 +44,7 @@ for needle, haystack in checks:
         raise SystemExit(f"missing expected content: {needle}")
 print("render assertions passed")
 PY
-  NETBIRD_INSTALL_DIR="$sandbox" \
-  bash "$SCRIPT_PATH" --noninteractive --install-dir "$sandbox" --domain test.example.invalid --dashboard-port 28084 --server-port 28085 --stun-port 23478 --1panel-root-conf "$sandbox/root.conf" 1panel-apply
+  bash "$SCRIPT_PATH" --noninteractive --config "$sandbox/netbird-server.env" 1panel-apply
   rg -n "127\\.0\\.0\\.1:28085|127\\.0\\.0\\.1:28084|grpc_pass" "$sandbox/root.conf" >/dev/null
   info "$(msg self_test_passed)"
 }

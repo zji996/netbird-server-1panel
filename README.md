@@ -4,19 +4,22 @@
 
 仓库只关注服务端部署、配置生成、状态查看、备份和卸载，不处理客户端安装。
 
-## 当前部署约定
+## 默认部署画像
 
-- 部署目录：`/root/netbird-docker`
-- 域名：`netbird.example.com`
-- Dashboard 本地端口：`127.0.0.1:18084`
-- Combined server 本地端口：`127.0.0.1:18085`
-- STUN UDP 公网端口：`13478/udp`
-- 1Panel OpenResty location 文件：`/opt/1panel/apps/openresty/openresty/www/sites/netbird.example.com/proxy/root.conf`
+- 配置入口：`netbird-server.env`
+- 示例配置：`netbird-server.env.example`
+- 部署目录：由 `NETBIRD_INSTALL_DIR` 控制，默认 `/root/netbird-docker`
+- 域名：由 `NETBIRD_DOMAIN` 控制，默认 `netbird.example.com`
+- Dashboard 本地端口：由 `NETBIRD_DASHBOARD_PORT` 控制，默认 `127.0.0.1:18084`
+- Combined server 本地端口：由 `NETBIRD_SERVER_PORT` 控制，默认 `127.0.0.1:18085`
+- STUN UDP 公网端口：由 `NETBIRD_STUN_PORT` 控制，默认 `13478/udp`
+- 1Panel OpenResty location 文件：默认按域名推导，也可用 `NETBIRD_1PANEL_ROOT_CONF` 覆盖
 - 容器：`netbird-dashboard`、`netbird-server`
 
 ## 目录说明
 
 - `netbird-server-tui.sh`：服务端维护 TUI，一键生成、安装、查看、备份、卸载。
+- `netbird-server.env.example`：集中配置示例，复制为 `netbird-server.env` 后只改这一处。
 - `lib/`：TUI 脚本模块，按通用工具、模板渲染、操作命令、菜单和自测拆分。
 - `docker-compose.yml`：脱敏后的当前 compose 摘要。
 - `1panel-openresty-root.conf`：脱敏后的当前 1Panel OpenResty location 摘要。
@@ -47,6 +50,24 @@ chmod +x ./netbird-server-tui.sh
 
 ```bash
 ./netbird-server-tui.sh
+```
+
+建议先复制配置文件，只改你关心的几项：
+
+```bash
+cp netbird-server.env.example netbird-server.env
+${EDITOR:-nano} netbird-server.env
+./netbird-server-tui.sh doctor
+```
+
+最少操作路径：
+
+```bash
+./netbird-server-tui.sh doctor
+./netbird-server-tui.sh render
+./netbird-server-tui.sh 1panel-preview
+./netbird-server-tui.sh 1panel-apply
+./netbird-server-tui.sh install
 ```
 
 进入 TUI 时会先选择界面语言，默认中文。非交互模式也默认中文，可用 `--lang en` 或 `NETBIRD_LANG=en` 切换英文：
@@ -81,6 +102,8 @@ NETBIRD_LANG=en ./netbird-server-tui.sh --noninteractive status
 ./netbird-server-tui.sh status
 ```
 
+推荐把长期配置写在 `netbird-server.env`，命令行参数只用于临时覆盖。脚本启动时会读取配置文件，随后按参数出现顺序应用命令行覆盖；当前 shell 中的 `NETBIRD_*` 环境变量也可用于自动化。
+
 ## 本机测试
 
 非破坏性自测：
@@ -94,12 +117,10 @@ NETBIRD_LANG=en ./netbird-server-tui.sh --noninteractive status
 如果要完整试跑 Docker 行为，可使用沙盒目录和测试端口：
 
 ```bash
+cp netbird-server.env.example /tmp/netbird-server.env
 ./netbird-server-tui.sh \
+  --config /tmp/netbird-server.env \
   --install-dir /tmp/netbird-server-tui/run \
-  --domain test.example.invalid \
-  --dashboard-port 28084 \
-  --server-port 28085 \
-  --stun-port 23478 \
   render
 ```
 

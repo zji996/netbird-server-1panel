@@ -41,6 +41,56 @@ endpoint_check() {
   fi
 }
 
+port_is_free() {
+  local bind="$1"
+  local port="$2"
+  if command -v ss >/dev/null 2>&1; then
+    ! ss -H -ltn "sport = :$port" 2>/dev/null | rg -q "($bind|0\\.0\\.0\\.0|\\[::\\]|\\*)"
+  else
+    ! timeout 1 bash -c "</dev/tcp/${bind}/${port}" >/dev/null 2>&1
+  fi
+}
+
+doctor_check() {
+  info "$(msg doctor_title)"
+
+  local config_file="${NETBIRD_CONFIG_FILE:-$SCRIPT_DIR/netbird-server.env}"
+  if [[ -f "$config_file" ]]; then
+    info "$(tf doctor_config_file "$config_file")"
+  else
+    warn "$(msg doctor_config_missing)"
+  fi
+
+  if command -v docker >/dev/null 2>&1; then
+    info "$(tf doctor_ok "$(msg doctor_docker)")"
+  else
+    warn "$(tf doctor_warn "docker")"
+  fi
+
+  if compose_cmd >/dev/null 2>&1; then
+    info "$(tf doctor_ok "$(msg doctor_compose)")"
+  else
+    warn "$(tf doctor_warn "$(msg err_compose_required)")"
+  fi
+
+  if port_is_free "$BIND_ADDRESS" "$DASHBOARD_PORT"; then
+    info "$(tf doctor_ok "$(tf doctor_port_free "$BIND_ADDRESS" "$DASHBOARD_PORT")")"
+  else
+    warn "$(tf doctor_warn "$(tf doctor_port_busy "$BIND_ADDRESS" "$DASHBOARD_PORT")")"
+  fi
+
+  if port_is_free "$BIND_ADDRESS" "$SERVER_PORT"; then
+    info "$(tf doctor_ok "$(tf doctor_port_free "$BIND_ADDRESS" "$SERVER_PORT")")"
+  else
+    warn "$(tf doctor_warn "$(tf doctor_port_busy "$BIND_ADDRESS" "$SERVER_PORT")")"
+  fi
+
+  info "$(tf doctor_warn "$(tf doctor_udp_note "$STUN_PORT")")"
+  info "$(tf doctor_install_dir "$INSTALL_DIR")"
+  info "$(tf doctor_1panel_path "$ONEPANEL_ROOT_CONF")"
+  info "$(msg doctor_summary)"
+}
+
 show_status() {
   info "$(tf status_install_dir "$INSTALL_DIR")"
   info "$(tf status_domain "$DOMAIN")"

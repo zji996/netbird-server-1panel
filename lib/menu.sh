@@ -3,6 +3,7 @@ main_menu() {
     local choice
     choice="$(tui_menu "$(msg menu_title)" \
       install "$(msg menu_install)" \
+      doctor "$(msg menu_doctor)" \
       render "$(msg menu_render)" \
       start "$(msg menu_start)" \
       stop "$(msg menu_stop)" \
@@ -28,6 +29,7 @@ main_menu() {
       onepanel-apply) prompt_settings; apply_1panel_conf ;;
       onepanel-check) check_1panel ;;
       backup) backup_installation ;;
+      doctor) doctor_check ;;
       uninstall) uninstall_installation ;;
       self-test) self_test ;;
       quit) exit 0 ;;

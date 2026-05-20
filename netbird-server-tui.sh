@@ -2,19 +2,6 @@
 set -Eeuo pipefail
 
 APP_NAME="NetBird Server TUI"
-DEFAULT_INSTALL_DIR="/root/netbird-docker"
-DEFAULT_DOMAIN="netbird.example.com"
-DEFAULT_DASHBOARD_PORT="18084"
-DEFAULT_SERVER_PORT="18085"
-DEFAULT_STUN_PORT="13478"
-DEFAULT_1PANEL_ROOT_CONF="/opt/1panel/apps/openresty/openresty/www/sites/${DEFAULT_DOMAIN}/proxy/root.conf"
-
-INSTALL_DIR="${NETBIRD_INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
-DOMAIN="${NETBIRD_DOMAIN:-$DEFAULT_DOMAIN}"
-DASHBOARD_PORT="${NETBIRD_DASHBOARD_PORT:-$DEFAULT_DASHBOARD_PORT}"
-SERVER_PORT="${NETBIRD_SERVER_PORT:-$DEFAULT_SERVER_PORT}"
-STUN_PORT="${NETBIRD_STUN_PORT:-$DEFAULT_STUN_PORT}"
-ONEPANEL_ROOT_CONF="${NETBIRD_1PANEL_ROOT_CONF:-$DEFAULT_1PANEL_ROOT_CONF}"
 NONINTERACTIVE="false"
 DRY_RUN="false"
 COMMAND="menu"
@@ -26,6 +13,8 @@ mkdir -p "$TMP_DIR"
 
 # shellcheck source=lib/common.sh
 source "$SCRIPT_DIR/lib/common.sh"
+# shellcheck source=lib/config.sh
+source "$SCRIPT_DIR/lib/config.sh"
 # shellcheck source=lib/i18n.sh
 source "$SCRIPT_DIR/lib/i18n.sh"
 # shellcheck source=lib/render.sh
@@ -44,7 +33,8 @@ $APP_NAME
 Usage:
   $0 [--install-dir DIR] [--domain DOMAIN] [--dashboard-port PORT]
      [--server-port PORT] [--stun-port PORT] [--1panel-root-conf FILE]
-     [--lang zh|en] [--noninteractive] [--dry-run] [command]
+     [--bind-address IP] [--public-scheme http|https] [--public-port PORT]
+     [--config FILE] [--lang zh|en] [--noninteractive] [--dry-run] [command]
 
 Commands:
   menu                 Open TUI menu (default)
@@ -57,22 +47,30 @@ Commands:
   1panel-apply         Backup and write OpenResty root.conf
   1panel-check         Check OpenResty config and reload if possible
   backup               Archive config and data directory
+  doctor               Check prerequisites and current configuration
   uninstall            Stop services and optionally remove data
   self-test            Run non-destructive local behavior tests
 
+Defaults are loaded from ./netbird-server.env when it exists.
 Environment overrides use NETBIRD_* names, for example NETBIRD_INSTALL_DIR.
 Language defaults to Chinese. Use --lang en or NETBIRD_LANG=en for English.
 EOF
 }
 
+load_config
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --config) NETBIRD_CONFIG_FILE="$2"; load_config; shift 2 ;;
     --install-dir) INSTALL_DIR="$2"; shift 2 ;;
     --domain) DOMAIN="$2"; shift 2 ;;
     --dashboard-port) DASHBOARD_PORT="$2"; shift 2 ;;
     --server-port) SERVER_PORT="$2"; shift 2 ;;
     --stun-port) STUN_PORT="$2"; shift 2 ;;
     --1panel-root-conf) ONEPANEL_ROOT_CONF="$2"; shift 2 ;;
+    --bind-address) BIND_ADDRESS="$2"; shift 2 ;;
+    --public-scheme) PUBLIC_SCHEME="$2"; shift 2 ;;
+    --public-port) PUBLIC_PORT="$2"; shift 2 ;;
     --lang) set_language "$2"; shift 2 ;;
     --noninteractive) NONINTERACTIVE="true"; shift ;;
     --dry-run) DRY_RUN="true"; shift ;;
@@ -80,6 +78,7 @@ while [[ $# -gt 0 ]]; do
     *) COMMAND="$1"; shift; break ;;
   esac
 done
+reload_config_after_cli
 
 select_language
 
@@ -96,6 +95,7 @@ case "$COMMAND" in
   1panel-apply) apply_1panel_conf ;;
   1panel-check) check_1panel ;;
   backup) backup_installation ;;
+  doctor) doctor_check ;;
   uninstall) uninstall_installation ;;
   self-test) self_test ;;
   *) usage; die "$(tf err_unknown_command "$COMMAND")" ;;

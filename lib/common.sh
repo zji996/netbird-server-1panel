@@ -114,6 +114,9 @@ prompt_settings() {
   DASHBOARD_PORT="$(tui_input "$(msg prompt_dashboard_port)" "$DASHBOARD_PORT")"
   SERVER_PORT="$(tui_input "$(msg prompt_server_port)" "$SERVER_PORT")"
   STUN_PORT="$(tui_input "$(msg prompt_stun_port)" "$STUN_PORT")"
+  BIND_ADDRESS="$(tui_input "$(msg prompt_bind_address)" "$BIND_ADDRESS")"
+  PUBLIC_SCHEME="$(tui_input "$(msg prompt_public_scheme)" "$PUBLIC_SCHEME")"
+  PUBLIC_PORT="$(tui_input "$(msg prompt_public_port)" "$PUBLIC_PORT")"
   ONEPANEL_ROOT_CONF="$(tui_input "$(msg prompt_1panel_path)" "$ONEPANEL_ROOT_CONF")"
   validate_settings
 }

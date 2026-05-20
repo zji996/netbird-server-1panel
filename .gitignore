@@ -1,4 +1,5 @@
 # Runtime secrets and state
+netbird-server.env
 config.yaml
 dashboard.env
 data/
