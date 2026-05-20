@@ -27,7 +27,7 @@ services:
       - "${BIND_ADDRESS}:${SERVER_PORT}:80"
       - "${STUN_PORT}:${STUN_PORT}/udp"
     volumes:
-      - ./config.yaml:/etc/netbird/config.yaml:ro
+      - ./config:/etc/netbird:ro
       - ./data:/var/lib/netbird
     command: ["--config", "/etc/netbird/config.yaml"]
     logging:

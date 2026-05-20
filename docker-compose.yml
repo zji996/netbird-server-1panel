@@ -20,5 +20,5 @@ services:
       - "127.0.0.1:18085:80"
       - "13478:13478/udp"
     volumes:
-      - /root/netbird-docker/config.yaml:/etc/netbird/config.yaml:ro
+      - /root/netbird-docker/config:/etc/netbird:ro
       - /root/netbird-docker/data:/var/lib/netbird

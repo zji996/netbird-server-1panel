@@ -45,7 +45,7 @@ Commands:
   menu                 Open TUI menu (default)
   wizard               Guided setup flow
   install              Render files and start services
-  render               Render docker-compose.yml, config.yaml, dashboard.env
+  render               Render docker-compose.yml, config/config.yaml, dashboard.env
   start|stop|restart   Manage Docker Compose services
   status               Show service and endpoint status
   logs                 Tail recent service logs

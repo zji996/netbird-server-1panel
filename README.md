@@ -29,7 +29,7 @@
 - `1panel-openresty-root.conf`：脱敏后的当前 1Panel OpenResty location 摘要。
 - `netbird/`：NetBird 源码 submodule，用来参考 upstream 的 combined server 配置和脚本。
 
-敏感或运行态文件不入库：`config.yaml`、`dashboard.env`、`data/`、SQLite 数据库、TLS 私钥、管理员凭据、日志和备份包。
+敏感或运行态文件不入库：`config/config.yaml`、`dashboard.env`、`data/`、SQLite 数据库、TLS 私钥、管理员凭据、日志和备份包。
 
 ## 使用方式
 
@@ -85,7 +85,7 @@ NETBIRD_LANG=en ./netbird-server-tui.sh --noninteractive status
 
 高级菜单里仍保留了底层操作：
 
-- `render`：只生成 `docker-compose.yml`、`config.yaml`、`dashboard.env`，不启动容器。
+- `render`：只生成 `docker-compose.yml`、`config/config.yaml`、`dashboard.env`，不启动容器。
 - `1panel-preview`：在 TUI 中预览 OpenResty location。
 - `1panel-apply`：写入 1Panel `root.conf`，写入前会备份旧文件。
 - `install`：生成服务文件并启动容器。
@@ -120,7 +120,7 @@ NETBIRD_PUBLIC_PORT=80
 
 - 邮箱默认是 `admin@<NETBIRD_DOMAIN>`，可用 `NETBIRD_ADMIN_EMAIL` 覆盖。
 - 命令行自动化也可以用 `--admin-email admin@example.com` 临时覆盖。
-- `config.yaml` 不保存管理员邮箱或密码，避免重启时覆盖你后续修改过的密码。
+- `config/config.yaml` 不保存管理员邮箱或密码，避免重启时覆盖你后续修改过的密码。
 - 明文密码只保存到安装目录的 `admin-credentials.txt`，文件权限会尽量设为 `600`。
 - 后续重新生成时会复用已有密码，不会悄悄重置管理员密码；管理员后续可以在后台自行修改密码。
 
@@ -134,7 +134,7 @@ NETBIRD_PUBLIC_PORT=80
 ./netbird-server-tui.sh self-test
 ```
 
-自测会在 `/tmp/netbird-server-tui/self-test-install` 渲染 compose、`config.yaml`、`dashboard.env` 和模拟的 `root.conf`，并检查关键字段。它不会启动真实服务，也不会改动 1Panel。
+自测会在 `/tmp/netbird-server-tui/self-test-install` 渲染 compose、`config/config.yaml`、`dashboard.env` 和模拟的 `root.conf`，并检查关键字段。它不会启动真实服务，也不会改动 1Panel。
 
 如果要完整试跑 Docker 行为，可使用沙盒目录和测试端口：
 

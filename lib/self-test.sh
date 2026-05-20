@@ -25,17 +25,18 @@ EOF
 import pathlib
 import sys
 root = pathlib.Path(sys.argv[1])
-required = ["docker-compose.yml", "config.yaml", "dashboard.env", "admin-credentials.txt"]
+required = ["docker-compose.yml", "config/config.yaml", "dashboard.env", "admin-credentials.txt"]
 missing = [name for name in required if not (root / name).exists()]
 if missing:
     raise SystemExit(f"missing files: {missing}")
 compose = (root / "docker-compose.yml").read_text()
-config = (root / "config.yaml").read_text()
+config = (root / "config/config.yaml").read_text()
 env = (root / "dashboard.env").read_text()
 checks = [
     ("127.0.0.1:28084:80", compose),
     ("127.0.0.1:28085:80", compose),
     ("23478:23478/udp", compose),
+    ("./config:/etc/netbird:ro", compose),
     ('exposedAddress: "https://test.example.invalid:443"', config),
     ("- 23478", config),
     ("AUTH_AUTHORITY=https://test.example.invalid/oauth2", env),
@@ -59,6 +60,10 @@ PY
   first_admin_password="$(awk -F': ' '$1 == "Password" {print $2; exit}' "$sandbox/admin-credentials.txt")"
   bash "$SCRIPT_PATH" --noninteractive --config "$sandbox/netbird-server.env" render
   [[ "$first_admin_password" == "$(awk -F': ' '$1 == "Password" {print $2; exit}' "$sandbox/admin-credentials.txt")" ]]
+  rm -rf "$sandbox/config/config.yaml"
+  mkdir -p "$sandbox/config/config.yaml"
+  bash "$SCRIPT_PATH" --noninteractive --config "$sandbox/netbird-server.env" render
+  [[ -f "$sandbox/config/config.yaml" ]]
   bash "$SCRIPT_PATH" --noninteractive --config "$sandbox/netbird-server.env" 1panel-apply
   rg -n "127\\.0\\.0\\.1:28085|127\\.0\\.0\\.1:28084|grpc_pass" "$sandbox/root.conf" >/dev/null
 
@@ -244,15 +249,18 @@ source "$SCRIPT_DIR/lib/actions.sh"
 run_compose() {
   printf '%s' "$*" > "$INSTALL_DIR/compose-called.txt"
 }
-touch "$INSTALL_DIR/docker-compose.yml" "$INSTALL_DIR/config.yaml" "$INSTALL_DIR/dashboard.env" "$INSTALL_DIR/admin-credentials.txt" "$INSTALL_DIR/data/state.db" "$ONEPANEL_ROOT_CONF"
-touch "$INSTALL_DIR/docker-compose.yml.bak.20260520120000" "$INSTALL_DIR/config.yaml.bak.20260520120000" "$INSTALL_DIR/dashboard.env.bak.20260520120000" "$INSTALL_DIR/admin-credentials.txt.bak.20260520120000"
+mkdir -p "$INSTALL_DIR/config"
+touch "$INSTALL_DIR/docker-compose.yml" "$INSTALL_DIR/config/config.yaml" "$INSTALL_DIR/config.yaml" "$INSTALL_DIR/dashboard.env" "$INSTALL_DIR/admin-credentials.txt" "$INSTALL_DIR/data/state.db" "$ONEPANEL_ROOT_CONF"
+touch "$INSTALL_DIR/docker-compose.yml.bak.20260520120000" "$INSTALL_DIR/config.bak.20260520120000" "$INSTALL_DIR/config.yaml.bak.20260520120000" "$INSTALL_DIR/dashboard.env.bak.20260520120000" "$INSTALL_DIR/admin-credentials.txt.bak.20260520120000"
 uninstall_installation
 [[ -f "$INSTALL_DIR/compose-called.txt" ]]
 [[ ! -e "$INSTALL_DIR/docker-compose.yml" ]]
+[[ ! -e "$INSTALL_DIR/config" ]]
 [[ ! -e "$INSTALL_DIR/config.yaml" ]]
 [[ ! -e "$INSTALL_DIR/dashboard.env" ]]
 [[ ! -e "$INSTALL_DIR/admin-credentials.txt" ]]
 [[ ! -e "$INSTALL_DIR/docker-compose.yml.bak.20260520120000" ]]
+[[ ! -e "$INSTALL_DIR/config.bak.20260520120000" ]]
 [[ ! -e "$INSTALL_DIR/config.yaml.bak.20260520120000" ]]
 [[ ! -e "$INSTALL_DIR/dashboard.env.bak.20260520120000" ]]
 [[ ! -e "$INSTALL_DIR/admin-credentials.txt.bak.20260520120000" ]]

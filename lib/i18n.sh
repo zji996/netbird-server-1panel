@@ -134,6 +134,10 @@ msg() {
     en:err_same_ports) echo "Dashboard and server ports must differ" ;;
     en:err_unknown_command) echo "Unknown command: %s" ;;
     en:err_compose_required) echo "Docker Compose is required" ;;
+    en:err_generated_file_missing) echo "Required generated file is missing: %s. Run render or install first." ;;
+    en:err_generated_file_not_file) echo "Required generated path must be a regular file: %s. Run render or install to repair it." ;;
+    en:err_generated_dir_missing) echo "Required generated directory is missing: %s. Run render or install first." ;;
+    en:err_generated_dir_not_dir) echo "Required generated path must be a directory: %s. Run render or install to repair it." ;;
     en:dry_run_write) echo "Dry run: would write %s" ;;
     en:dry_run_remove) echo "Dry run: would remove %s" ;;
     en:dry_run_compose_down) echo "Dry run: would run docker compose down in %s" ;;
@@ -305,6 +309,10 @@ msg() {
     zh:err_same_ports) echo "Dashboard 和 Server 端口不能相同" ;;
     zh:err_unknown_command) echo "未知命令：%s" ;;
     zh:err_compose_required) echo "需要 Docker Compose" ;;
+    zh:err_generated_file_missing) echo "缺少必需的生成文件：%s。请先运行 render 或 install。" ;;
+    zh:err_generated_file_not_file) echo "必需路径应为普通文件：%s。请运行 render 或 install 修复。" ;;
+    zh:err_generated_dir_missing) echo "缺少必需的生成目录：%s。请先运行 render 或 install。" ;;
+    zh:err_generated_dir_not_dir) echo "必需路径应为目录：%s。请运行 render 或 install 修复。" ;;
     zh:dry_run_write) echo "演练模式：将写入 %s" ;;
     zh:dry_run_remove) echo "演练模式：将删除 %s" ;;
     zh:dry_run_compose_down) echo "演练模式：将在 %s 执行 docker compose down" ;;

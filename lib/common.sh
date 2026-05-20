@@ -286,16 +286,14 @@ PY
 }
 
 existing_secret_or_new() {
-  local config="$INSTALL_DIR/config.yaml"
-  if existing_yaml_value "$config" "authSecret"; then
+  if existing_config_yaml_value "authSecret"; then
     return 0
   fi
   random_secret
 }
 
 existing_encryption_key_or_new() {
-  local config="$INSTALL_DIR/config.yaml"
-  if existing_yaml_value "$config" "encryptionKey"; then
+  if existing_config_yaml_value "encryptionKey"; then
     return 0
   fi
   random_secret
@@ -303,6 +301,29 @@ existing_encryption_key_or_new() {
 
 admin_credentials_file() {
   printf '%s/admin-credentials.txt' "$INSTALL_DIR"
+}
+
+config_dir() {
+  printf '%s/config' "$INSTALL_DIR"
+}
+
+config_file() {
+  printf '%s/config/config.yaml' "$INSTALL_DIR"
+}
+
+legacy_config_file() {
+  printf '%s/config.yaml' "$INSTALL_DIR"
+}
+
+existing_config_yaml_value() {
+  local key="$1"
+  local file
+  for file in "$(config_file)" "$(legacy_config_file)"; do
+    if [[ -f "$file" ]] && existing_yaml_value "$file" "$key"; then
+      return 0
+    fi
+  done
+  return 1
 }
 
 existing_admin_password_or_new() {
@@ -356,9 +377,22 @@ EOF
 backup_file_if_exists() {
   local file="$1"
   [[ -e "$file" ]] || return 0
-  local backup="${file}.bak.$(date +%Y%m%d%H%M%S)"
+  local backup base suffix
+  base="${file}.bak.$(date +%Y%m%d%H%M%S)"
+  backup="$base"
+  suffix=1
+  while [[ -e "$backup" ]]; do
+    backup="${base}.${suffix}"
+    suffix=$((suffix + 1))
+  done
   info "$(tf backup_file "$file" "$backup")"
   cp -a "$file" "$backup"
+}
+
+replace_directory_target_if_needed() {
+  local target="$1"
+  [[ -d "$target" && ! -L "$target" ]] || return 0
+  rm -rf "$target"
 }
 
 write_file() {
@@ -371,5 +405,6 @@ write_file() {
   fi
   mkdir -p "$(dirname "$target")"
   backup_file_if_exists "$target"
+  replace_directory_target_if_needed "$target"
   cp "$tmp" "$target"
 }

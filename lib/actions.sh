@@ -7,20 +7,59 @@ render_files() {
   encryption_key="$(existing_encryption_key_or_new)"
   admin_password="$(existing_admin_password_or_new)"
 
+  prepare_config_directory
   mkdir -p "$INSTALL_DIR/data"
   render_compose > "$TMP_DIR/docker-compose.yml"
   render_config_yaml "$relay_secret" "$encryption_key" > "$TMP_DIR/config.yaml"
   render_dashboard_env > "$TMP_DIR/dashboard.env"
 
   write_file "$INSTALL_DIR/docker-compose.yml" "$TMP_DIR/docker-compose.yml"
-  write_file "$INSTALL_DIR/config.yaml" "$TMP_DIR/config.yaml"
+  write_file "$(config_file)" "$TMP_DIR/config.yaml"
   write_file "$INSTALL_DIR/dashboard.env" "$TMP_DIR/dashboard.env"
   write_admin_credentials "$admin_password"
   info "$(tf rendered_files "$INSTALL_DIR")"
 }
 
+prepare_config_directory() {
+  local dir
+  dir="$(config_dir)"
+  if [[ -e "$dir" && ! -d "$dir" ]]; then
+    backup_file_if_exists "$dir"
+    rm -f "$dir"
+  fi
+  mkdir -p "$dir"
+}
+
+require_generated_file() {
+  local file="$1"
+  if [[ ! -e "$file" ]]; then
+    die "$(tf err_generated_file_missing "$file")"
+  fi
+  if [[ ! -f "$file" ]]; then
+    die "$(tf err_generated_file_not_file "$file")"
+  fi
+}
+
+require_generated_dir() {
+  local dir="$1"
+  if [[ ! -e "$dir" ]]; then
+    die "$(tf err_generated_dir_missing "$dir")"
+  fi
+  if [[ ! -d "$dir" ]]; then
+    die "$(tf err_generated_dir_not_dir "$dir")"
+  fi
+}
+
+ensure_generated_layout() {
+  require_generated_file "$INSTALL_DIR/docker-compose.yml"
+  require_generated_dir "$(config_dir)"
+  require_generated_file "$(config_file)"
+  require_generated_file "$INSTALL_DIR/dashboard.env"
+}
+
 start_services() {
   require_cmd docker
+  ensure_generated_layout
   info "$(msg progress_start_services)"
   run_compose up -d
 }
@@ -32,6 +71,7 @@ stop_services() {
 
 restart_services() {
   info "$(msg progress_restart_services)"
+  ensure_generated_layout
   run_compose up -d --force-recreate
 }
 
@@ -193,7 +233,7 @@ backup_installation() {
   local backup_dir archive
   backup_dir="$(dirname "$INSTALL_DIR")"
   archive="${backup_dir}/netbird-backup-$(date +%Y%m%d%H%M%S).tar.gz"
-  tar -czf "$archive" -C "$INSTALL_DIR" docker-compose.yml config.yaml dashboard.env data 2>/dev/null || tar -czf "$archive" -C "$INSTALL_DIR" .
+  tar -czf "$archive" -C "$INSTALL_DIR" docker-compose.yml config dashboard.env data 2>/dev/null || tar -czf "$archive" -C "$INSTALL_DIR" .
   info "$(tf backup_archive "$archive")"
 }
 
@@ -350,6 +390,7 @@ uninstall_installation() {
   local generated_files=(
     "$INSTALL_DIR/docker-compose.yml"
     "$INSTALL_DIR/config.yaml"
+    "$INSTALL_DIR/config"
     "$INSTALL_DIR/dashboard.env"
     "$(admin_credentials_file)"
   )
@@ -362,6 +403,7 @@ uninstall_installation() {
     generated_files+=(
       "$INSTALL_DIR"/docker-compose.yml.bak.*
       "$INSTALL_DIR"/config.yaml.bak.*
+      "$INSTALL_DIR"/config.bak.*
       "$INSTALL_DIR"/dashboard.env.bak.*
       "$INSTALL_DIR"/admin-credentials.txt.bak.*
     )
@@ -377,7 +419,14 @@ uninstall_installation() {
         [[ -e "$file" ]] && info "$(tf dry_run_remove "$file")"
       done
     else
-      rm -f "${generated_files[@]}"
+      for file in "${generated_files[@]}"; do
+        [[ -e "$file" ]] || continue
+        if [[ -d "$file" && ! -L "$file" ]]; then
+          rm -rf "$file"
+        else
+          rm -f "$file"
+        fi
+      done
     fi
   fi
 
