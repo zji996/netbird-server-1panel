@@ -5,6 +5,8 @@ APP_NAME="NetBird Server TUI"
 NONINTERACTIVE="false"
 DRY_RUN="false"
 COMMAND="menu"
+CLI_PUBLIC_SCHEME_SET="false"
+CLI_PUBLIC_PORT_SET="false"
 
 SCRIPT_PATH="${BASH_SOURCE[0]}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
@@ -36,7 +38,8 @@ Usage:
   $0 [--install-dir DIR] [--domain DOMAIN] [--dashboard-port PORT]
      [--server-port PORT] [--stun-port PORT] [--1panel-root-conf FILE]
      [--bind-address IP] [--public-scheme http|https] [--public-port PORT]
-     [--profile NAME] [--config FILE] [--lang zh|en] [--noninteractive] [--dry-run] [command]
+     [--admin-email EMAIL] [--profile NAME] [--config FILE] [--lang zh|en]
+     [--noninteractive] [--dry-run] [command]
 
 Commands:
   menu                 Open TUI menu (default)
@@ -73,8 +76,9 @@ while [[ $# -gt 0 ]]; do
     --stun-port) STUN_PORT="$2"; shift 2 ;;
     --1panel-root-conf) ONEPANEL_ROOT_CONF="$2"; shift 2 ;;
     --bind-address) BIND_ADDRESS="$2"; shift 2 ;;
-    --public-scheme) PUBLIC_SCHEME="$2"; shift 2 ;;
-    --public-port) PUBLIC_PORT="$2"; shift 2 ;;
+    --public-scheme) PUBLIC_SCHEME="$2"; CLI_PUBLIC_SCHEME_SET="true"; shift 2 ;;
+    --public-port) PUBLIC_PORT="$2"; CLI_PUBLIC_PORT_SET="true"; shift 2 ;;
+    --admin-email) ADMIN_EMAIL="$2"; ADMIN_EMAIL_DERIVED_DEFAULT="false"; shift 2 ;;
     --lang) set_language "$2"; shift 2 ;;
     --noninteractive) NONINTERACTIVE="true"; shift ;;
     --dry-run) DRY_RUN="true"; shift ;;
@@ -82,6 +86,9 @@ while [[ $# -gt 0 ]]; do
     *) COMMAND="$1"; shift; break ;;
   esac
 done
+if [[ "$CLI_PUBLIC_SCHEME_SET" == "true" && "$CLI_PUBLIC_PORT_SET" != "true" ]]; then
+  PUBLIC_PORT="$(default_public_port "$PUBLIC_SCHEME")"
+fi
 reload_config_after_cli
 
 select_language

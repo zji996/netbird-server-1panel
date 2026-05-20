@@ -16,6 +16,7 @@ CONFIG_ENV_KEYS=(
   NETBIRD_BIND_ADDRESS
   NETBIRD_PUBLIC_SCHEME
   NETBIRD_PUBLIC_PORT
+  NETBIRD_ADMIN_EMAIL
   NETBIRD_DASHBOARD_IMAGE
   NETBIRD_SERVER_IMAGE
   NETBIRD_1PANEL_ROOT_CONF
@@ -77,6 +78,14 @@ derive_profile_name() {
   sanitize_profile_name "$domain"
 }
 
+default_public_port() {
+  if [[ "${1:-http}" == "https" ]]; then
+    printf '443'
+  else
+    printf '80'
+  fi
+}
+
 list_profiles() {
   local dir
   dir="$(profile_dir)"
@@ -129,6 +138,8 @@ reset_config_values() {
   BIND_ADDRESS=""
   PUBLIC_SCHEME=""
   PUBLIC_PORT=""
+  ADMIN_EMAIL=""
+  ADMIN_EMAIL_DERIVED_DEFAULT="true"
   DASHBOARD_IMAGE=""
   SERVER_IMAGE=""
   ONEPANEL_ROOT_CONF=""
@@ -154,8 +165,15 @@ load_config() {
   SERVER_PORT="${NETBIRD_SERVER_PORT:-${SERVER_PORT:-18085}}"
   STUN_PORT="${NETBIRD_STUN_PORT:-${STUN_PORT:-13478}}"
   BIND_ADDRESS="${NETBIRD_BIND_ADDRESS:-${BIND_ADDRESS:-127.0.0.1}}"
-  PUBLIC_SCHEME="${NETBIRD_PUBLIC_SCHEME:-${PUBLIC_SCHEME:-https}}"
-  PUBLIC_PORT="${NETBIRD_PUBLIC_PORT:-${PUBLIC_PORT:-443}}"
+  PUBLIC_SCHEME="${NETBIRD_PUBLIC_SCHEME:-${PUBLIC_SCHEME:-http}}"
+  PUBLIC_PORT="${NETBIRD_PUBLIC_PORT:-${PUBLIC_PORT:-$(default_public_port "$PUBLIC_SCHEME")}}"
+  if [[ ${NETBIRD_ADMIN_EMAIL+x} ]]; then
+    ADMIN_EMAIL="${NETBIRD_ADMIN_EMAIL:-${ADMIN_EMAIL:-admin@${DOMAIN}}}"
+    ADMIN_EMAIL_DERIVED_DEFAULT="false"
+  else
+    ADMIN_EMAIL="admin@${DOMAIN}"
+    ADMIN_EMAIL_DERIVED_DEFAULT="true"
+  fi
   DASHBOARD_IMAGE="${NETBIRD_DASHBOARD_IMAGE:-${DASHBOARD_IMAGE:-netbirdio/dashboard:latest}}"
   SERVER_IMAGE="${NETBIRD_SERVER_IMAGE:-${SERVER_IMAGE:-netbirdio/netbird-server:latest}}"
   ONEPANEL_ROOT_CONF="${NETBIRD_1PANEL_ROOT_CONF:-${ONEPANEL_ROOT_CONF:-}}"
@@ -163,5 +181,8 @@ load_config() {
 }
 
 reload_config_after_cli() {
+  if [[ "${ADMIN_EMAIL_DERIVED_DEFAULT:-false}" == "true" ]]; then
+    ADMIN_EMAIL="admin@${DOMAIN}"
+  fi
   derive_config
 }
