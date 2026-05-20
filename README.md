@@ -17,6 +17,7 @@
 ## 目录说明
 
 - `netbird-server-tui.sh`：服务端维护 TUI，一键生成、安装、查看、备份、卸载。
+- `lib/`：TUI 脚本模块，按通用工具、模板渲染、操作命令、菜单和自测拆分。
 - `docker-compose.yml`：脱敏后的当前 compose 摘要。
 - `1panel-openresty-root.conf`：脱敏后的当前 1Panel OpenResty location 摘要。
 - `netbird/`：NetBird 源码 submodule，用来参考 upstream 的 combined server 配置和脚本。
