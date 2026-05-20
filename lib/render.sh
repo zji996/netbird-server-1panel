@@ -100,6 +100,10 @@ EOF
 }
 
 render_openresty_root_conf() {
+  local hsts_header=""
+  if [[ "$PUBLIC_SCHEME" == "https" ]]; then
+    hsts_header='    add_header Strict-Transport-Security "max-age=31536000";'
+  fi
   cat <<EOF
 location ^~ /relay {
     proxy_pass http://${BIND_ADDRESS}:${SERVER_PORT};
@@ -109,7 +113,7 @@ location ^~ /relay {
     proxy_set_header Host \$host;
     proxy_set_header X-Real-IP \$remote_addr;
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-Proto ${PUBLIC_SCHEME};
     proxy_read_timeout 1d;
 }
 
@@ -121,7 +125,7 @@ location ^~ /ws-proxy/ {
     proxy_set_header Host \$host;
     proxy_set_header X-Real-IP \$remote_addr;
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-Proto ${PUBLIC_SCHEME};
     proxy_read_timeout 1d;
 }
 
@@ -132,7 +136,7 @@ location ^~ /signalexchange.SignalExchange/ {
     grpc_socket_keepalive on;
     grpc_set_header Host \$host;
     grpc_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-    grpc_set_header X-Forwarded-Proto https;
+    grpc_set_header X-Forwarded-Proto ${PUBLIC_SCHEME};
 }
 
 location ^~ /management.ManagementService/ {
@@ -142,7 +146,7 @@ location ^~ /management.ManagementService/ {
     grpc_socket_keepalive on;
     grpc_set_header Host \$host;
     grpc_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-    grpc_set_header X-Forwarded-Proto https;
+    grpc_set_header X-Forwarded-Proto ${PUBLIC_SCHEME};
 }
 
 location ^~ /management.ProxyService/ {
@@ -152,7 +156,7 @@ location ^~ /management.ProxyService/ {
     grpc_socket_keepalive on;
     grpc_set_header Host \$host;
     grpc_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-    grpc_set_header X-Forwarded-Proto https;
+    grpc_set_header X-Forwarded-Proto ${PUBLIC_SCHEME};
 }
 
 location ^~ /api/ {
@@ -160,7 +164,7 @@ location ^~ /api/ {
     proxy_set_header Host \$host;
     proxy_set_header X-Real-IP \$remote_addr;
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-Proto ${PUBLIC_SCHEME};
     proxy_read_timeout 1d;
 }
 
@@ -169,7 +173,7 @@ location ^~ /oauth2/ {
     proxy_set_header Host \$host;
     proxy_set_header X-Real-IP \$remote_addr;
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-Proto ${PUBLIC_SCHEME};
     proxy_read_timeout 1d;
 }
 
@@ -181,13 +185,13 @@ location ^~ / {
     proxy_set_header REMOTE-HOST \$remote_addr;
     proxy_set_header Upgrade \$http_upgrade;
     proxy_set_header Connection \$http_connection;
-    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-Proto ${PUBLIC_SCHEME};
     proxy_http_version 1.1;
     add_header X-Cache \$upstream_cache_status;
     add_header Cache-Control no-cache;
     proxy_ssl_server_name off;
     proxy_ssl_name \$proxy_host;
-    add_header Strict-Transport-Security "max-age=31536000";
+${hsts_header}
 }
 EOF
 }

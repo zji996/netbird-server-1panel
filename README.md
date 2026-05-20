@@ -27,17 +27,6 @@
 
 敏感或运行态文件不入库：`config.yaml`、`dashboard.env`、`data/`、SQLite 数据库、TLS 私钥、管理员凭据、日志和备份包。
 
-## 还差什么
-
-现有摘要已经能说明容器和反代形态，但真正一键部署还需要脚本补齐这些内容：
-
-- 生成 `config.yaml`：包含 `server.exposedAddress`、`server.stunPorts`、relay `authSecret`、SQLite 加密 key、embedded IdP/OIDC 回调地址。
-- 生成 `dashboard.env`：指向 `https://<domain>` 和 embedded IdP 的 `/oauth2`。
-- 写入或预览 1Panel OpenResty `root.conf`：HTTP/WebSocket 转发给 `18085`，gRPC 用 `grpc_pass` 转给 `18085`，Dashboard 根路径转给 `18084`。
-- 启停、重启、日志、状态检查：覆盖本地 dashboard、OIDC endpoint、公网 OIDC endpoint、OpenResty 配置存在性。
-- 备份与卸载：保留或删除 `data/` 由操作时确认。
-- 本机沙盒测试：验证脚本渲染、1Panel 配置生成和关键字段，不触碰真实 `/root` 或 `/opt/1panel`。
-
 ## 使用方式
 
 给脚本执行权限：
@@ -52,7 +41,9 @@ chmod +x ./netbird-server-tui.sh
 ./netbird-server-tui.sh
 ```
 
-建议先复制配置文件，只改你关心的几项：
+主菜单默认进入“部署向导”。向导会在一个表单里配置大多数信息：域名、安装目录、HTTP/HTTPS、本地端口、STUN 端口和 1Panel `root.conf` 路径。随后用勾选项决定是否保存配置、生成服务文件、在 TUI 内预览 OpenResty 配置、写入 1Panel、启动容器。
+
+不想在 TUI 里逐项填，也可以先复制配置文件，只改你关心的几项：
 
 ```bash
 cp netbird-server.env.example netbird-server.env
@@ -63,11 +54,13 @@ ${EDITOR:-nano} netbird-server.env
 最少操作路径：
 
 ```bash
-./netbird-server-tui.sh doctor
-./netbird-server-tui.sh render
-./netbird-server-tui.sh 1panel-preview
-./netbird-server-tui.sh 1panel-apply
-./netbird-server-tui.sh install
+./netbird-server-tui.sh
+```
+
+如果使用命令行自动化，可直接运行：
+
+```bash
+./netbird-server-tui.sh wizard
 ```
 
 进入 TUI 时会先选择界面语言，默认中文。非交互模式也默认中文，可用 `--lang en` 或 `NETBIRD_LANG=en` 切换英文：
@@ -77,32 +70,28 @@ ${EDITOR:-nano} netbird-server.env
 NETBIRD_LANG=en ./netbird-server-tui.sh --noninteractive status
 ```
 
-直接渲染并启动默认部署：
+高级菜单里仍保留了底层操作：
 
-```bash
-./netbird-server-tui.sh install
-```
-
-只预览 1Panel OpenResty 配置：
-
-```bash
-./netbird-server-tui.sh 1panel-preview
-```
-
-写入 1Panel OpenResty 配置，脚本会先备份旧文件：
-
-```bash
-./netbird-server-tui.sh 1panel-apply
-./netbird-server-tui.sh 1panel-check
-```
-
-查看状态：
-
-```bash
-./netbird-server-tui.sh status
-```
+- `render`：只生成 `docker-compose.yml`、`config.yaml`、`dashboard.env`，不启动容器。
+- `1panel-preview`：在 TUI 中预览 OpenResty location。
+- `1panel-apply`：写入 1Panel `root.conf`，写入前会备份旧文件。
+- `install`：生成服务文件并启动容器。
+- `doctor`：检查 Docker、Compose、本地端口、80/443、UDP STUN 提示和 1Panel 路径。
 
 推荐把长期配置写在 `netbird-server.env`，命令行参数只用于临时覆盖。脚本启动时会读取配置文件，随后按参数出现顺序应用命令行覆盖；当前 shell 中的 `NETBIRD_*` 环境变量也可用于自动化。
+
+## HTTP/HTTPS
+
+默认是 `https`，适合 1Panel 已经为站点配置 SSL 的情况。脚本会检查 80/443 端口状态，提醒是否可能被占用。
+
+如果只是本机测试、可信内网，或者前面还有其他代理负责 TLS，可以在向导里把公网协议改为 `http`，或在 `netbird-server.env` 中设置：
+
+```bash
+NETBIRD_PUBLIC_SCHEME=http
+NETBIRD_PUBLIC_PORT=80
+```
+
+HTTP 模式会让 OpenResty 配置使用 `X-Forwarded-Proto: http`，并不输出 HSTS。除非你明确知道登录流量不会暴露，否则生产环境仍建议使用 HTTPS。
 
 ## 本机测试
 

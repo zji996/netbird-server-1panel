@@ -58,7 +58,7 @@ doctor_check() {
   if [[ -f "$config_file" ]]; then
     info "$(tf doctor_config_file "$config_file")"
   else
-    warn "$(msg doctor_config_missing)"
+    info "$(msg doctor_config_missing)"
   fi
 
   if command -v docker >/dev/null 2>&1; then
@@ -83,6 +83,26 @@ doctor_check() {
     info "$(tf doctor_ok "$(tf doctor_port_free "$BIND_ADDRESS" "$SERVER_PORT")")"
   else
     warn "$(tf doctor_warn "$(tf doctor_port_busy "$BIND_ADDRESS" "$SERVER_PORT")")"
+  fi
+
+  if [[ "$PUBLIC_SCHEME" == "https" ]]; then
+    if port_is_free "0.0.0.0" 80; then
+      info "$(tf doctor_ok "$(tf doctor_public_port_free 80)")"
+    else
+      info "$(tf doctor_warn "$(tf doctor_public_port_busy 80)")"
+    fi
+    if port_is_free "0.0.0.0" "$PUBLIC_PORT"; then
+      info "$(tf doctor_ok "$(tf doctor_public_port_free "$PUBLIC_PORT")")"
+    else
+      info "$(tf doctor_warn "$(tf doctor_public_port_busy "$PUBLIC_PORT")")"
+    fi
+  else
+    info "$(tf doctor_warn "$(msg doctor_http_mode)")"
+    if port_is_free "0.0.0.0" "$PUBLIC_PORT"; then
+      info "$(tf doctor_ok "$(tf doctor_public_port_free "$PUBLIC_PORT")")"
+    else
+      info "$(tf doctor_warn "$(tf doctor_public_port_busy "$PUBLIC_PORT")")"
+    fi
   fi
 
   info "$(tf doctor_warn "$(tf doctor_udp_note "$STUN_PORT")")"

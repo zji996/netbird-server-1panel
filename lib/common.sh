@@ -70,6 +70,42 @@ tui_input() {
   fi
 }
 
+tui_form() {
+  local title="$1"
+  local message="$2"
+  shift 2
+  if command -v whiptail >/dev/null 2>&1; then
+    whiptail --title "$APP_NAME" --form "$message" 24 92 14 "$@" 3>&1 1>&2 2>&3
+  elif command -v dialog >/dev/null 2>&1; then
+    dialog --title "$APP_NAME" --form "$message" 24 92 14 "$@" 3>&1 1>&2 2>&3
+  else
+    return 1
+  fi
+}
+
+tui_checklist() {
+  local message="$1"; shift
+  if command -v whiptail >/dev/null 2>&1; then
+    whiptail --title "$APP_NAME" --checklist "$message" 18 82 8 "$@" 3>&1 1>&2 2>&3
+  elif command -v dialog >/dev/null 2>&1; then
+    dialog --title "$APP_NAME" --checklist "$message" 18 82 8 "$@" 3>&1 1>&2 2>&3
+  else
+    return 1
+  fi
+}
+
+tui_textbox() {
+  local file="$1"
+  local title="${2:-$APP_NAME}"
+  if command -v whiptail >/dev/null 2>&1; then
+    whiptail --title "$title" --textbox "$file" 28 100
+  elif command -v dialog >/dev/null 2>&1; then
+    dialog --title "$title" --textbox "$file" 28 100
+  else
+    ${PAGER:-less} "$file"
+  fi
+}
+
 maybe_sudo() {
   local err="$TMP_DIR/maybe-sudo.err"
   if "$@" 2>"$err"; then
@@ -105,7 +141,9 @@ validate_settings() {
   valid_port "$DASHBOARD_PORT" || die "$(tf err_dashboard_port "$DASHBOARD_PORT")"
   valid_port "$SERVER_PORT" || die "$(tf err_server_port "$SERVER_PORT")"
   valid_port "$STUN_PORT" || die "$(tf err_stun_port "$STUN_PORT")"
+  valid_port "$PUBLIC_PORT" || die "$(tf err_public_port "$PUBLIC_PORT")"
   [[ "$DASHBOARD_PORT" != "$SERVER_PORT" ]] || die "$(msg err_same_ports)"
+  [[ "$PUBLIC_SCHEME" == "http" || "$PUBLIC_SCHEME" == "https" ]] || die "$(tf err_public_scheme "$PUBLIC_SCHEME")"
 }
 
 prompt_settings() {

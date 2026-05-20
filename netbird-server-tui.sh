@@ -21,6 +21,8 @@ source "$SCRIPT_DIR/lib/i18n.sh"
 source "$SCRIPT_DIR/lib/render.sh"
 # shellcheck source=lib/actions.sh
 source "$SCRIPT_DIR/lib/actions.sh"
+# shellcheck source=lib/wizard.sh
+source "$SCRIPT_DIR/lib/wizard.sh"
 # shellcheck source=lib/self-test.sh
 source "$SCRIPT_DIR/lib/self-test.sh"
 # shellcheck source=lib/menu.sh
@@ -38,6 +40,7 @@ Usage:
 
 Commands:
   menu                 Open TUI menu (default)
+  wizard               Guided setup flow
   install              Render files and start services
   render               Render docker-compose.yml, config.yaml, dashboard.env
   start|stop|restart   Manage Docker Compose services
@@ -84,6 +87,7 @@ select_language
 
 case "$COMMAND" in
   menu) main_menu ;;
+  wizard) setup_wizard ;;
   install) install_flow ;;
   render) render_files ;;
   start) start_services ;;
