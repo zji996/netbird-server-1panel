@@ -20,6 +20,10 @@ has_tui() {
   [[ -t 0 && "$NONINTERACTIVE" != "true" ]] && { command -v whiptail >/dev/null 2>&1 || command -v dialog >/dev/null 2>&1 || command -v fzf >/dev/null 2>&1; }
 }
 
+has_form_tui() {
+  [[ -t 0 && "$NONINTERACTIVE" != "true" ]] && { command -v whiptail >/dev/null 2>&1 || command -v dialog >/dev/null 2>&1; }
+}
+
 tui_menu() {
   local title="$1"; shift
   if command -v whiptail >/dev/null 2>&1; then
@@ -40,17 +44,48 @@ tui_menu() {
 
 tui_yesno() {
   local message="$1"
+  local default="${2:-yes}"
+  local choice
+  choice="$(tui_yesno_choice "$message" "$default")" || return 1
+  [[ "$choice" == "yes" ]]
+}
+
+tui_yesno_choice() {
+  local message="$1"
+  local default="${2:-yes}"
+  local rc
   if [[ "$NONINTERACTIVE" == "true" ]]; then
+    if [[ "$default" == "yes" ]]; then
+      printf 'yes'
+    else
+      printf 'no'
+    fi
     return 0
   fi
   if command -v whiptail >/dev/null 2>&1; then
-    whiptail --title "$APP_NAME" --yesno "$message" 12 72
+    local args=(--title "$APP_NAME")
+    [[ "$default" == "no" ]] && args+=(--defaultno)
+    whiptail "${args[@]}" --yesno "$message" 12 72
+    rc=$?
   elif command -v dialog >/dev/null 2>&1; then
-    dialog --title "$APP_NAME" --yesno "$message" 12 72
+    local args=(--title "$APP_NAME")
+    [[ "$default" == "no" ]] && args+=(--defaultno)
+    dialog "${args[@]}" --yesno "$message" 12 72
+    rc=$?
   else
     read -r -p "$message [y/N] " answer
-    [[ "$answer" =~ ^[Yy]$ ]]
+    if [[ "$answer" =~ ^[Yy]$ ]]; then
+      printf 'yes'
+    else
+      printf 'no'
+    fi
+    return 0
   fi
+  case "$rc" in
+    0) printf 'yes' ;;
+    1) printf 'no' ;;
+    *) printf 'cancel'; return 1 ;;
+  esac
 }
 
 tui_input() {
@@ -91,6 +126,32 @@ tui_checklist() {
     dialog --title "$APP_NAME" --checklist "$message" 18 82 8 "$@" 3>&1 1>&2 2>&3
   else
     return 1
+  fi
+}
+
+tui_radiolist() {
+  local message="$1"; shift
+  if command -v whiptail >/dev/null 2>&1; then
+    whiptail --title "$APP_NAME" --radiolist "$message" 22 84 10 "$@" 3>&1 1>&2 2>&3
+  elif command -v dialog >/dev/null 2>&1; then
+    dialog --title "$APP_NAME" --radiolist "$message" 22 84 10 "$@" 3>&1 1>&2 2>&3
+  else
+    return 1
+  fi
+}
+
+tui_msgbox() {
+  local message="$1"
+  if [[ "$NONINTERACTIVE" == "true" ]]; then
+    info "$message"
+    return 0
+  fi
+  if command -v whiptail >/dev/null 2>&1; then
+    whiptail --title "$APP_NAME" --msgbox "$message" 14 76
+  elif command -v dialog >/dev/null 2>&1; then
+    dialog --title "$APP_NAME" --msgbox "$message" 14 76
+  else
+    printf '%s\n' "$message"
   fi
 }
 
@@ -136,14 +197,27 @@ valid_port() {
   [[ "$1" =~ ^[0-9]+$ ]] && (( "$1" >= 1 && "$1" <= 65535 ))
 }
 
+check_settings() {
+  local errs=()
+  [[ -n "$DOMAIN" ]] || errs+=("$(msg err_empty_domain)")
+  valid_port "$DASHBOARD_PORT" || errs+=("$(tf err_dashboard_port "$DASHBOARD_PORT")")
+  valid_port "$SERVER_PORT" || errs+=("$(tf err_server_port "$SERVER_PORT")")
+  valid_port "$STUN_PORT" || errs+=("$(tf err_stun_port "$STUN_PORT")")
+  valid_port "$PUBLIC_PORT" || errs+=("$(tf err_public_port "$PUBLIC_PORT")")
+  [[ "$DASHBOARD_PORT" != "$SERVER_PORT" ]] || errs+=("$(msg err_same_ports)")
+  [[ "$PUBLIC_SCHEME" == "http" || "$PUBLIC_SCHEME" == "https" ]] || errs+=("$(tf err_public_scheme "$PUBLIC_SCHEME")")
+  if (( ${#errs[@]} > 0 )); then
+    printf '%s\n' "${errs[@]}"
+    return 1
+  fi
+  return 0
+}
+
 validate_settings() {
-  [[ -n "$DOMAIN" ]] || die "$(msg err_empty_domain)"
-  valid_port "$DASHBOARD_PORT" || die "$(tf err_dashboard_port "$DASHBOARD_PORT")"
-  valid_port "$SERVER_PORT" || die "$(tf err_server_port "$SERVER_PORT")"
-  valid_port "$STUN_PORT" || die "$(tf err_stun_port "$STUN_PORT")"
-  valid_port "$PUBLIC_PORT" || die "$(tf err_public_port "$PUBLIC_PORT")"
-  [[ "$DASHBOARD_PORT" != "$SERVER_PORT" ]] || die "$(msg err_same_ports)"
-  [[ "$PUBLIC_SCHEME" == "http" || "$PUBLIC_SCHEME" == "https" ]] || die "$(tf err_public_scheme "$PUBLIC_SCHEME")"
+  local err
+  if ! err="$(check_settings)"; then
+    die "$err"
+  fi
 }
 
 prompt_settings() {
