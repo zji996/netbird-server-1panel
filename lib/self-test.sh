@@ -64,7 +64,7 @@ PY
   mkdir -p "$sandbox/config/config.yaml"
   bash "$SCRIPT_PATH" --noninteractive --config "$sandbox/netbird-server.env" render
   [[ -f "$sandbox/config/config.yaml" ]]
-  bash "$SCRIPT_PATH" --noninteractive --config "$sandbox/netbird-server.env" 1panel-apply
+  NETBIRD_SKIP_OPENRESTY_RELOAD=true bash "$SCRIPT_PATH" --noninteractive --config "$sandbox/netbird-server.env" 1panel-apply
   rg -n "127\\.0\\.0\\.1:28085|127\\.0\\.0\\.1:28084|grpc_pass" "$sandbox/root.conf" >/dev/null
 
   local port_sandbox="$TMP_DIR/self-test-public-port"
@@ -83,7 +83,7 @@ NETBIRD_ADMIN_EMAIL=admin@port.example.invalid
 NETBIRD_1PANEL_ROOT_CONF=/tmp/netbird-server-tui/self-test-public-port/root.conf
 EOF
   bash "$SCRIPT_PATH" --noninteractive --config "$port_sandbox/netbird-server.env" render
-  bash "$SCRIPT_PATH" --noninteractive --config "$port_sandbox/netbird-server.env" 1panel-apply
+  NETBIRD_SKIP_OPENRESTY_RELOAD=true bash "$SCRIPT_PATH" --noninteractive --config "$port_sandbox/netbird-server.env" 1panel-apply
   python3 - "$port_sandbox" <<'PY'
 import pathlib
 import sys
@@ -110,6 +110,54 @@ for unexpected in ("real-domain", "production-domain"):
     if unexpected in config + env + creds + root_conf:
         raise SystemExit("unexpected deployment placeholder leaked into generated test files")
 PY
+
+  local apply_sandbox="$TMP_DIR/self-test-apply-reload"
+  rm -rf "$apply_sandbox"
+  mkdir -p "$apply_sandbox/bin" "$apply_sandbox/install"
+  NETBIRD_TEST_APPLY_DIR="$apply_sandbox" bash -s -- "$SCRIPT_DIR" <<'EOF'
+set -Eeuo pipefail
+SCRIPT_DIR="$1"
+APP_NAME="NetBird Server TUI"
+TMP_DIR="${TMPDIR:-/tmp}/netbird-server-tui"
+NONINTERACTIVE="true"
+DRY_RUN="false"
+INSTALL_DIR="$NETBIRD_TEST_APPLY_DIR/install"
+DOMAIN="apply.example.invalid"
+PUBLIC_SCHEME="http"
+PUBLIC_PORT="34180"
+DASHBOARD_PORT="34084"
+SERVER_PORT="34085"
+STUN_PORT="34086"
+BIND_ADDRESS="127.0.0.1"
+ADMIN_EMAIL="admin@apply.example.invalid"
+ONEPANEL_ROOT_CONF="$INSTALL_DIR/root.conf"
+PATH="$NETBIRD_TEST_APPLY_DIR/bin:$PATH"
+cat > "$NETBIRD_TEST_APPLY_DIR/bin/docker" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+log="${NETBIRD_TEST_APPLY_DIR}/docker.log"
+printf '%s\n' "$*" >> "$log"
+if [[ "$*" == "ps --format {{.Names}}" ]]; then
+  printf '1panel-openresty\n'
+elif [[ "$*" == "exec 1panel-openresty nginx -t" ]]; then
+  printf 'nginx ok\n'
+elif [[ "$*" == "exec 1panel-openresty nginx -s reload" ]]; then
+  printf 'reloaded\n'
+else
+  :
+fi
+SH
+chmod +x "$NETBIRD_TEST_APPLY_DIR/bin/docker"
+source "$SCRIPT_DIR/lib/i18n.sh"
+source "$SCRIPT_DIR/lib/config.sh"
+source "$SCRIPT_DIR/lib/common.sh"
+source "$SCRIPT_DIR/lib/render.sh"
+source "$SCRIPT_DIR/lib/actions.sh"
+apply_1panel_conf
+rg -q "exec 1panel-openresty nginx -t" "$NETBIRD_TEST_APPLY_DIR/docker.log"
+rg -q "exec 1panel-openresty nginx -s reload" "$NETBIRD_TEST_APPLY_DIR/docker.log"
+rg -q "X-Forwarded-Port 34180" "$ONEPANEL_ROOT_CONF"
+EOF
 
   local profile_sandbox="$TMP_DIR/self-test-profiles"
   rm -rf "$profile_sandbox"

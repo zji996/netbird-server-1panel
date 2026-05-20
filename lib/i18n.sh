@@ -178,6 +178,11 @@ msg() {
     en:root_conf_contains) echo "root.conf contains:" ;;
     en:checking_openresty) echo "Checking OpenResty container: %s" ;;
     en:no_openresty) echo "No running OpenResty container detected. You can reload it from 1Panel after applying root.conf." ;;
+    en:openresty_test_failed) echo "OpenResty config test failed in container %s. Please check the nginx -t output above." ;;
+    en:openresty_reloaded) echo "Reloaded OpenResty container: %s" ;;
+    en:public_port_listening) echo "Public TCP port %s is listening on this host." ;;
+    en:public_port_not_listening) echo "Public TCP port %s is not listening on this host." ;;
+    en:public_port_site_note) echo "root.conf is only a location snippet. If port %s is not listening, add this port to the 1Panel website's listen/port settings and reload OpenResty." ;;
     en:firewall_opened) echo "Opened firewall ports via %s: TCP %s, UDP %s" ;;
     en:firewall_manual) echo "No supported firewall manager detected. If access fails, allow TCP %s and UDP %s manually." ;;
     en:firewall_failed) echo "Failed to update firewall via %s. Please allow TCP %s and UDP %s manually." ;;
@@ -354,6 +359,11 @@ msg() {
     zh:root_conf_contains) echo "root.conf 包含：" ;;
     zh:checking_openresty) echo "正在检查 OpenResty 容器：%s" ;;
     zh:no_openresty) echo "未检测到运行中的 OpenResty 容器。写入 root.conf 后可在 1Panel 中重载。" ;;
+    zh:openresty_test_failed) echo "OpenResty 容器 %s 配置检查失败，请查看上面的 nginx -t 输出。" ;;
+    zh:openresty_reloaded) echo "已重载 OpenResty 容器：%s" ;;
+    zh:public_port_listening) echo "本机公网 TCP %s 端口正在监听。" ;;
+    zh:public_port_not_listening) echo "本机公网 TCP %s 端口没有监听。" ;;
+    zh:public_port_site_note) echo "root.conf 只是 location 片段。如果 %s 端口没有监听，需要先在 1Panel 网站的监听端口/端口设置里加入该端口，再重载 OpenResty。" ;;
     zh:firewall_opened) echo "已通过 %s 放行端口：TCP %s，UDP %s" ;;
     zh:firewall_manual) echo "未检测到支持的防火墙管理器。如访问失败，请手动放行 TCP %s 和 UDP %s。" ;;
     zh:firewall_failed) echo "通过 %s 更新防火墙失败。请手动放行 TCP %s 和 UDP %s。" ;;

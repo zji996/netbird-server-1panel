@@ -206,6 +206,49 @@ apply_1panel_conf() {
   fi
   maybe_sudo cp "$TMP_DIR/root.conf" "$ONEPANEL_ROOT_CONF"
   info "$(tf wrote_file "$ONEPANEL_ROOT_CONF")"
+  [[ "${NETBIRD_SKIP_OPENRESTY_RELOAD:-false}" == "true" ]] && return 0
+  reload_openresty_if_possible || true
+}
+
+openresty_container() {
+  command -v docker >/dev/null 2>&1 || return 1
+  docker ps --format '{{.Names}}' 2>/dev/null | rg 'openresty|1panel.*openresty' | head -n 1 || true
+}
+
+public_port_is_listening() {
+  if command -v ss >/dev/null 2>&1; then
+    ss -H -ltn "sport = :$PUBLIC_PORT" 2>/dev/null | rg -q .
+  else
+    timeout 1 bash -c "</dev/tcp/127.0.0.1/${PUBLIC_PORT}" >/dev/null 2>&1
+  fi
+}
+
+check_public_port_listener() {
+  if public_port_is_listening; then
+    info "$(tf public_port_listening "$PUBLIC_PORT")"
+  else
+    warn "$(tf public_port_not_listening "$PUBLIC_PORT")"
+    warn "$(tf public_port_site_note "$PUBLIC_PORT")"
+  fi
+}
+
+reload_openresty_if_possible() {
+  local container
+  container="$(openresty_container)"
+  if [[ -z "$container" ]]; then
+    warn "$(msg no_openresty)"
+    check_public_port_listener
+    return 1
+  fi
+
+  info "$(tf checking_openresty "$container")"
+  if ! docker exec "$container" nginx -t; then
+    warn "$(tf openresty_test_failed "$container")"
+    return 1
+  fi
+  docker exec "$container" nginx -s reload
+  info "$(tf openresty_reloaded "$container")"
+  check_public_port_listener
 }
 
 check_1panel() {
@@ -217,15 +260,18 @@ check_1panel() {
     warn "$(tf root_conf_missing "$ONEPANEL_ROOT_CONF")"
   fi
 
-  container="$(docker ps --format '{{.Names}}' | rg 'openresty|1panel.*openresty' | head -n 1 || true)"
+  container="$(openresty_container)"
   if [[ -n "$container" ]]; then
     info "$(tf checking_openresty "$container")"
     docker exec "$container" nginx -t
     if tui_yesno "$(tf reload_openresty "$container")"; then
       docker exec "$container" nginx -s reload
+      info "$(tf openresty_reloaded "$container")"
     fi
+    check_public_port_listener
   else
     warn "$(msg no_openresty)"
+    check_public_port_listener
   fi
 }
 

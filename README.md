@@ -123,6 +123,8 @@ NETBIRD_PUBLIC_PORT=18084
 
 脚本会把公网地址统一生成成 `http://netbird.example.com:18084`，并同步写入 dashboard API endpoint、OIDC issuer/redirect URI、NetBird server exposed address，以及 OpenResty 的 `Host` / `X-Forwarded-Port` 相关转发头。1Panel 里只需要让该公网端口进入同一个站点，由生成的 `root.conf` 把 `/api/`、`/oauth2/`、gRPC、`/relay` 转到 server，把 `/` 转到 dashboard；不需要再单独给 dashboard 直连暴露一套公网路径。
 
+注意：`root.conf` 只是 1Panel 站点里的 location 片段，不能自己创建 `listen 18084` 这类站点监听端口。脚本写入 `root.conf` 后会尝试执行 `nginx -t` 并重载 OpenResty，也会检查 `NETBIRD_PUBLIC_PORT` 是否正在监听；如果提示端口未监听，需要先在 1Panel 网站的端口/监听设置里把该公网端口加到同一个站点，再重载 OpenResty。
+
 这个字段控制 NetBird 生成的公网地址、OIDC issuer/redirect URI，以及 OpenResty 的 `X-Forwarded-Proto`。1Panel 只是给站点加证书时，记得同步改成 `https` 并重新生成配置，否则浏览器/客户端看到的 URL 和 NetBird 自己生成的 URL 会不一致。
 
 ## 管理员账号和端口
