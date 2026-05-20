@@ -1,21 +1,21 @@
 main_menu() {
   while true; do
     local choice
-    choice="$(tui_menu "Select operation" \
-      install "Render config and start services" \
-      render "Render or update generated files" \
-      start "Start services" \
-      stop "Stop services" \
-      restart "Restart services" \
-      status "Show status and endpoint checks" \
-      logs "Show recent logs" \
-      onepanel-preview "Preview 1Panel OpenResty config" \
-      onepanel-apply "Apply 1Panel OpenResty config" \
-      onepanel-check "Check and optionally reload OpenResty" \
-      backup "Backup config and data" \
-      uninstall "Uninstall services/config" \
-      self-test "Run local behavior tests" \
-      quit "Exit")" || exit 0
+    choice="$(tui_menu "$(msg menu_title)" \
+      install "$(msg menu_install)" \
+      render "$(msg menu_render)" \
+      start "$(msg menu_start)" \
+      stop "$(msg menu_stop)" \
+      restart "$(msg menu_restart)" \
+      status "$(msg menu_status)" \
+      logs "$(msg menu_logs)" \
+      onepanel-preview "$(msg menu_1panel_preview)" \
+      onepanel-apply "$(msg menu_1panel_apply)" \
+      onepanel-check "$(msg menu_1panel_check)" \
+      backup "$(msg menu_backup)" \
+      uninstall "$(msg menu_uninstall)" \
+      self-test "$(msg menu_self_test)" \
+      quit "$(msg menu_quit)")" || exit 0
     case "$choice" in
       install) install_flow ;;
       render) prompt_settings; render_files ;;
@@ -33,7 +33,7 @@ main_menu() {
       quit) exit 0 ;;
     esac
     if [[ -t 0 ]]; then
-      read -r -p "Press Enter to continue..." _
+      read -r -p "$(msg press_enter)" _
     fi
   done
 }

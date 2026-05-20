@@ -13,7 +13,7 @@ compose_cmd() {
 }
 
 require_cmd() {
-  command -v "$1" >/dev/null 2>&1 || die "Missing required command: $1"
+  command -v "$1" >/dev/null 2>&1 || die "$(tf err_missing_cmd "$1")"
 }
 
 has_tui() {
@@ -88,7 +88,7 @@ maybe_sudo() {
 
 run_compose() {
   local cmd
-  cmd="$(compose_cmd)" || die "Docker Compose is required"
+  cmd="$(compose_cmd)" || die "$(msg err_compose_required)"
   (cd "$INSTALL_DIR" && $cmd "$@")
 }
 
@@ -101,20 +101,20 @@ valid_port() {
 }
 
 validate_settings() {
-  [[ -n "$DOMAIN" ]] || die "Domain cannot be empty"
-  valid_port "$DASHBOARD_PORT" || die "Invalid dashboard port: $DASHBOARD_PORT"
-  valid_port "$SERVER_PORT" || die "Invalid server port: $SERVER_PORT"
-  valid_port "$STUN_PORT" || die "Invalid STUN port: $STUN_PORT"
-  [[ "$DASHBOARD_PORT" != "$SERVER_PORT" ]] || die "Dashboard and server ports must differ"
+  [[ -n "$DOMAIN" ]] || die "$(msg err_empty_domain)"
+  valid_port "$DASHBOARD_PORT" || die "$(tf err_dashboard_port "$DASHBOARD_PORT")"
+  valid_port "$SERVER_PORT" || die "$(tf err_server_port "$SERVER_PORT")"
+  valid_port "$STUN_PORT" || die "$(tf err_stun_port "$STUN_PORT")"
+  [[ "$DASHBOARD_PORT" != "$SERVER_PORT" ]] || die "$(msg err_same_ports)"
 }
 
 prompt_settings() {
-  DOMAIN="$(tui_input "NetBird public domain" "$DOMAIN")"
-  INSTALL_DIR="$(tui_input "Install directory" "$INSTALL_DIR")"
-  DASHBOARD_PORT="$(tui_input "Dashboard localhost port" "$DASHBOARD_PORT")"
-  SERVER_PORT="$(tui_input "Combined server localhost port" "$SERVER_PORT")"
-  STUN_PORT="$(tui_input "Public UDP STUN port" "$STUN_PORT")"
-  ONEPANEL_ROOT_CONF="$(tui_input "1Panel OpenResty root.conf path" "$ONEPANEL_ROOT_CONF")"
+  DOMAIN="$(tui_input "$(msg prompt_domain)" "$DOMAIN")"
+  INSTALL_DIR="$(tui_input "$(msg prompt_install_dir)" "$INSTALL_DIR")"
+  DASHBOARD_PORT="$(tui_input "$(msg prompt_dashboard_port)" "$DASHBOARD_PORT")"
+  SERVER_PORT="$(tui_input "$(msg prompt_server_port)" "$SERVER_PORT")"
+  STUN_PORT="$(tui_input "$(msg prompt_stun_port)" "$STUN_PORT")"
+  ONEPANEL_ROOT_CONF="$(tui_input "$(msg prompt_1panel_path)" "$ONEPANEL_ROOT_CONF")"
   validate_settings
 }
 
@@ -156,7 +156,7 @@ backup_file_if_exists() {
   local file="$1"
   [[ -e "$file" ]] || return 0
   local backup="${file}.bak.$(date +%Y%m%d%H%M%S)"
-  info "Backup: $file -> $backup"
+  info "$(tf backup_file "$file" "$backup")"
   cp -a "$file" "$backup"
 }
 
@@ -164,7 +164,7 @@ write_file() {
   local target="$1"
   local tmp="$2"
   if [[ "$DRY_RUN" == "true" ]]; then
-    info "Dry run: would write $target"
+    info "$(tf dry_run_write "$target")"
     cat "$tmp"
     return 0
   fi

@@ -5,7 +5,7 @@ self_test() {
   local sandbox="$TMP_DIR/self-test-install"
   rm -rf "$sandbox"
   mkdir -p "$sandbox"
-  info "Running render self-test in $sandbox"
+  info "$(tf self_test_start "$sandbox")"
   NETBIRD_INSTALL_DIR="$sandbox" \
   NETBIRD_DOMAIN="test.example.invalid" \
   NETBIRD_DASHBOARD_PORT="28084" \
@@ -42,5 +42,5 @@ PY
   NETBIRD_INSTALL_DIR="$sandbox" \
   bash "$SCRIPT_PATH" --noninteractive --install-dir "$sandbox" --domain test.example.invalid --dashboard-port 28084 --server-port 28085 --stun-port 23478 --1panel-root-conf "$sandbox/root.conf" 1panel-apply
   rg -n "127\\.0\\.0\\.1:28085|127\\.0\\.0\\.1:28084|grpc_pass" "$sandbox/root.conf" >/dev/null
-  info "Self-test passed"
+  info "$(msg self_test_passed)"
 }

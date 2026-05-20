@@ -49,6 +49,13 @@ chmod +x ./netbird-server-tui.sh
 ./netbird-server-tui.sh
 ```
 
+进入 TUI 时会先选择界面语言，默认中文。非交互模式也默认中文，可用 `--lang en` 或 `NETBIRD_LANG=en` 切换英文：
+
+```bash
+./netbird-server-tui.sh --lang en status
+NETBIRD_LANG=en ./netbird-server-tui.sh --noninteractive status
+```
+
 直接渲染并启动默认部署：
 
 ```bash

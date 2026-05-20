@@ -26,6 +26,8 @@ mkdir -p "$TMP_DIR"
 
 # shellcheck source=lib/common.sh
 source "$SCRIPT_DIR/lib/common.sh"
+# shellcheck source=lib/i18n.sh
+source "$SCRIPT_DIR/lib/i18n.sh"
 # shellcheck source=lib/render.sh
 source "$SCRIPT_DIR/lib/render.sh"
 # shellcheck source=lib/actions.sh
@@ -42,7 +44,7 @@ $APP_NAME
 Usage:
   $0 [--install-dir DIR] [--domain DOMAIN] [--dashboard-port PORT]
      [--server-port PORT] [--stun-port PORT] [--1panel-root-conf FILE]
-     [--noninteractive] [--dry-run] [command]
+     [--lang zh|en] [--noninteractive] [--dry-run] [command]
 
 Commands:
   menu                 Open TUI menu (default)
@@ -59,6 +61,7 @@ Commands:
   self-test            Run non-destructive local behavior tests
 
 Environment overrides use NETBIRD_* names, for example NETBIRD_INSTALL_DIR.
+Language defaults to Chinese. Use --lang en or NETBIRD_LANG=en for English.
 EOF
 }
 
@@ -70,12 +73,15 @@ while [[ $# -gt 0 ]]; do
     --server-port) SERVER_PORT="$2"; shift 2 ;;
     --stun-port) STUN_PORT="$2"; shift 2 ;;
     --1panel-root-conf) ONEPANEL_ROOT_CONF="$2"; shift 2 ;;
+    --lang) set_language "$2"; shift 2 ;;
     --noninteractive) NONINTERACTIVE="true"; shift ;;
     --dry-run) DRY_RUN="true"; shift ;;
     -h|--help) usage; exit 0 ;;
     *) COMMAND="$1"; shift; break ;;
   esac
 done
+
+select_language
 
 case "$COMMAND" in
   menu) main_menu ;;
@@ -92,5 +98,5 @@ case "$COMMAND" in
   backup) backup_installation ;;
   uninstall) uninstall_installation ;;
   self-test) self_test ;;
-  *) usage; die "Unknown command: $COMMAND" ;;
+  *) usage; die "$(tf err_unknown_command "$COMMAND")" ;;
 esac
