@@ -93,7 +93,6 @@ msg() {
     en:profile_name_prompt) echo "Profile name" ;;
     en:profile_loaded) echo "Loaded profile %s" ;;
     en:profile_saved) echo "Saved profile %s" ;;
-    en:profile_none) echo "No profiles found; creating a new profile." ;;
     en:press_enter) echo "Press Enter to continue..." ;;
     en:reload_openresty) echo "Reload OpenResty container %s now?" ;;
     en:remove_config) echo "Remove generated config files in %s? Data is kept unless you confirm the next prompt." ;;
@@ -229,7 +228,6 @@ msg() {
     zh:profile_name_prompt) echo "Profile 名称" ;;
     zh:profile_loaded) echo "已加载 profile：%s" ;;
     zh:profile_saved) echo "已保存 profile：%s" ;;
-    zh:profile_none) echo "未发现 profile，将新建一个。" ;;
     zh:press_enter) echo "按 Enter 继续..." ;;
     zh:reload_openresty) echo "现在重载 OpenResty 容器 %s 吗？" ;;
     zh:remove_config) echo "删除 %s 中生成的配置文件吗？数据会保留，除非你在下一步确认删除。" ;;

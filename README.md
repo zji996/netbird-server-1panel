@@ -45,7 +45,7 @@ chmod +x ./netbird-server-tui.sh
 
 主菜单默认进入“部署向导”。向导主线是 4 步，选中已有 profile 时会多一个复用捷径页：
 
-1. **选择 profile**：已有 profile 直接列出，按域名展示；首次部署或选「新建 profile」时跳过这一步。
+1. **选择 profile**：没有 profile 时自动新建；已有 profile 时直接列出，按域名展示，也可以选择「新建 profile」。
 2. **复用捷径**（仅当选了已有 profile）：把当前 profile 摘要一屏展示，默认选项是「完整部署（保存 + 渲染 + 写 1Panel + 启动）」，也可以选「编辑设置 / 删除 profile / 取消」。
 3. **基本配置**：只问三件事——域名、公网协议（https/http）、安装目录。其它字段使用默认值或 profile 已有值。
 4. **高级配置**（默认跳过）：通过 yes/no 决定是否进入。需要时一并设置本地端口、绑定地址、公网端口、1Panel `root.conf` 路径、Profile 名称（默认从域名 sanitize 派生）。

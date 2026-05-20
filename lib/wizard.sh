@@ -80,7 +80,6 @@ wiz_pick_profile() {
     NETBIRD_CONFIG_FILE=""
     reset_config_values
     load_config
-    info "$(msg profile_none)"
     return 0
   fi
 

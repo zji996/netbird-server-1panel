@@ -81,6 +81,9 @@ DRY_RUN="false"
 source "$SCRIPT_DIR/lib/common.sh"
 source "$SCRIPT_DIR/lib/config.sh"
 source "$SCRIPT_DIR/lib/i18n.sh"
+source "$SCRIPT_DIR/lib/render.sh"
+source "$SCRIPT_DIR/lib/actions.sh"
+source "$SCRIPT_DIR/lib/wizard.sh"
 NETBIRD_PROFILE=first
 load_config
 [[ "$DOMAIN" == "first.example.invalid" ]]
@@ -98,6 +101,11 @@ delete_profile "../second"
 [[ -d "$NETBIRD_PROFILE_DIR/second" ]]
 delete_profile "second"
 [[ ! -d "$NETBIRD_PROFILE_DIR/second" ]]
+NETBIRD_PROFILE_DIR="$NETBIRD_PROFILE_DIR/empty"
+mkdir -p "$NETBIRD_PROFILE_DIR"
+wiz_pick_profile
+[[ "$WIZARD_PROFILE_MODE" == "new" ]]
+[[ -z "$ACTIVE_PROFILE" ]]
 EOF
   info "$(msg self_test_passed)"
 }
