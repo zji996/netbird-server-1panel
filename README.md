@@ -183,18 +183,3 @@ git add netbird
 ```
 
 当前 submodule 来源：`https://github.com/zji996/netbird`。
-
-## 推送到远端
-
-本地仓库准备好后，添加远端并推送：
-
-```bash
-git remote add origin <your-repo-url>
-git push -u origin main
-```
-
-如果使用 GitHub CLI 创建私有仓库：
-
-```bash
-gh repo create zji996/netbird-server-1panel --private --source=. --remote=origin --push
-```
