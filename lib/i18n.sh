@@ -45,6 +45,7 @@ msg() {
     en:prompt_public_port) echo "Public HTTPS port" ;;
     en:err_public_port) echo "Invalid public port: %s" ;;
     en:err_public_scheme) echo "Invalid public scheme: %s" ;;
+    en:dialog_required) echo "The setup wizard requires 'dialog' for form screens. Install it and rerun: sudo apt-get update && sudo apt-get install -y dialog" ;;
     en:wizard_title) echo "NetBird server setup" ;;
     en:wizard_step) echo "Step %s/%s" ;;
     en:wizard_essentials_title) echo "Step 2/4: Essentials" ;;
@@ -180,6 +181,7 @@ msg() {
     zh:prompt_public_port) echo "公网 HTTPS 端口" ;;
     zh:err_public_port) echo "公网端口无效：%s" ;;
     zh:err_public_scheme) echo "公网协议无效：%s" ;;
+    zh:dialog_required) echo "部署向导需要安装 dialog 才能显示表单。请先执行：sudo apt-get update && sudo apt-get install -y dialog，然后重新运行脚本。" ;;
     zh:wizard_title) echo "NetBird 服务端部署向导" ;;
     zh:wizard_step) echo "第 %s/%s 步" ;;
     zh:wizard_essentials_title) echo "第 2/4 步：基本配置" ;;

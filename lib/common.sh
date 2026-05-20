@@ -21,7 +21,7 @@ has_tui() {
 }
 
 has_form_tui() {
-  [[ -t 0 && "$NONINTERACTIVE" != "true" ]] && { command -v whiptail >/dev/null 2>&1 || command -v dialog >/dev/null 2>&1; }
+  [[ -t 0 && "$NONINTERACTIVE" != "true" ]] && command -v dialog >/dev/null 2>&1
 }
 
 tui_menu() {
@@ -109,9 +109,7 @@ tui_form() {
   local title="$1"
   local message="$2"
   shift 2
-  if command -v whiptail >/dev/null 2>&1; then
-    whiptail --title "$APP_NAME" --form "$message" 24 92 14 "$@" 3>&1 1>&2 2>&3
-  elif command -v dialog >/dev/null 2>&1; then
+  if command -v dialog >/dev/null 2>&1; then
     dialog --title "$APP_NAME" --form "$message" 24 92 14 "$@" 3>&1 1>&2 2>&3
   else
     return 1

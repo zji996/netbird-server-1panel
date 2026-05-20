@@ -8,7 +8,7 @@ main_menu() {
       advanced "$(msg menu_advanced)" \
       quit "$(msg menu_quit)")" || exit 0
     case "$choice" in
-      wizard) setup_wizard ;;
+      wizard) setup_wizard || true ;;
       doctor) doctor_check ;;
       status) show_status ;;
       advanced) advanced_menu ;;
@@ -38,7 +38,7 @@ advanced_menu() {
       self-test "$(msg menu_self_test)" \
       back "$(msg menu_back)")" || return 0
     case "$choice" in
-      install) install_flow ;;
+      install) install_flow || true ;;
       render) render_files ;;
       start) start_services ;;
       stop) stop_services ;;

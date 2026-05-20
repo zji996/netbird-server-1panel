@@ -208,6 +208,10 @@ install_flow() {
       setup_wizard
       return
     fi
+    if has_tui; then
+      warn "$(msg dialog_required)"
+      return 1
+    fi
     validate_settings
   fi
   render_files

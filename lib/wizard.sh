@@ -267,8 +267,8 @@ wiz_delete_current() {
 
 setup_wizard() {
   if ! has_form_tui; then
-    install_flow
-    return 0
+    warn "$(msg dialog_required)"
+    return 1
   fi
 
   local state="pick"
