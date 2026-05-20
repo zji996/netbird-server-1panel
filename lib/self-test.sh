@@ -46,5 +46,58 @@ print("render assertions passed")
 PY
   bash "$SCRIPT_PATH" --noninteractive --config "$sandbox/netbird-server.env" 1panel-apply
   rg -n "127\\.0\\.0\\.1:28085|127\\.0\\.0\\.1:28084|grpc_pass" "$sandbox/root.conf" >/dev/null
+
+  local profile_sandbox="$TMP_DIR/self-test-profiles"
+  rm -rf "$profile_sandbox"
+  mkdir -p "$profile_sandbox/first" "$profile_sandbox/second"
+  cat > "$profile_sandbox/first/profile.env" <<'EOF'
+NETBIRD_DOMAIN=first.example.invalid
+NETBIRD_INSTALL_DIR=/tmp/netbird-server-tui/first-install
+NETBIRD_DASHBOARD_PORT=30084
+NETBIRD_SERVER_PORT=30085
+NETBIRD_STUN_PORT=30086
+NETBIRD_BIND_ADDRESS=127.0.0.1
+NETBIRD_PUBLIC_SCHEME=https
+NETBIRD_PUBLIC_PORT=443
+NETBIRD_1PANEL_ROOT_CONF=/tmp/netbird-server-tui/first-root.conf
+EOF
+  cat > "$profile_sandbox/second/profile.env" <<'EOF'
+NETBIRD_DOMAIN=second.example.invalid
+NETBIRD_INSTALL_DIR=/tmp/netbird-server-tui/second-install
+NETBIRD_DASHBOARD_PORT=31084
+NETBIRD_SERVER_PORT=31085
+NETBIRD_STUN_PORT=31086
+NETBIRD_BIND_ADDRESS=127.0.0.1
+NETBIRD_PUBLIC_SCHEME=http
+NETBIRD_PUBLIC_PORT=80
+EOF
+  NETBIRD_PROFILE_DIR="$profile_sandbox" bash -s -- "$SCRIPT_DIR" <<'EOF'
+set -Eeuo pipefail
+SCRIPT_DIR="$1"
+APP_NAME="NetBird Server TUI"
+TMP_DIR="${TMPDIR:-/tmp}/netbird-server-tui"
+NONINTERACTIVE="true"
+DRY_RUN="false"
+source "$SCRIPT_DIR/lib/common.sh"
+source "$SCRIPT_DIR/lib/config.sh"
+source "$SCRIPT_DIR/lib/i18n.sh"
+NETBIRD_PROFILE=first
+load_config
+[[ "$DOMAIN" == "first.example.invalid" ]]
+[[ "$PUBLIC_SCHEME" == "https" ]]
+[[ "$ONEPANEL_ROOT_CONF" == "/tmp/netbird-server-tui/first-root.conf" ]]
+NETBIRD_PROFILE=second
+load_config
+[[ "$DOMAIN" == "second.example.invalid" ]]
+[[ "$PUBLIC_SCHEME" == "http" ]]
+[[ "$PUBLIC_PORT" == "80" ]]
+[[ "$ONEPANEL_ROOT_CONF" == "/opt/1panel/apps/openresty/openresty/www/sites/second.example.invalid/proxy/root.conf" ]]
+[[ "$(profile_one_line second)" == "second.example.invalid" ]]
+[[ "$(derive_profile_name "netbird.example.com")" == "netbird-example-com" ]]
+delete_profile "../second"
+[[ -d "$NETBIRD_PROFILE_DIR/second" ]]
+delete_profile "second"
+[[ ! -d "$NETBIRD_PROFILE_DIR/second" ]]
+EOF
   info "$(msg self_test_passed)"
 }

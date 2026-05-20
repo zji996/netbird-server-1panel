@@ -43,7 +43,13 @@ chmod +x ./netbird-server-tui.sh
 ./netbird-server-tui.sh
 ```
 
-主菜单默认进入“部署向导”。如果已经有 profile，向导会先问你是否复用；没有 profile 时会新建一个。随后在一个表单里配置大多数信息：域名、安装目录、HTTP/HTTPS、本地端口、STUN 端口和 1Panel `root.conf` 路径。最后用勾选项决定是否保存 profile、生成服务文件、在 TUI 内预览 OpenResty 配置、写入 1Panel、启动容器。
+主菜单默认进入“部署向导”。向导主线是 4 步，选中已有 profile 时会多一个复用捷径页：
+
+1. **选择 profile**：已有 profile 直接列出，按域名展示；首次部署或选「新建 profile」时跳过这一步。
+2. **复用捷径**（仅当选了已有 profile）：把当前 profile 摘要一屏展示，默认选项是「完整部署（保存 + 渲染 + 写 1Panel + 启动）」，也可以选「编辑设置 / 删除 profile / 取消」。
+3. **基本配置**：只问三件事——域名、公网协议（https/http）、安装目录。其它字段使用默认值或 profile 已有值。
+4. **高级配置**（默认跳过）：通过 yes/no 决定是否进入。需要时一并设置本地端口、绑定地址、公网端口、1Panel `root.conf` 路径、Profile 名称（默认从域名 sanitize 派生）。
+5. **确认与执行**：屏上展示完整摘要 + 80/443 端口提示 + HTTP 警告，单选「完整部署 / 仅生成 / 仅保存 profile / 返回编辑 / 取消」。完整部署是默认选项。
 
 最少操作路径：
 
@@ -51,13 +57,15 @@ chmod +x ./netbird-server-tui.sh
 ./netbird-server-tui.sh
 ```
 
+复用已有 profile 时只要 2 次回车（选 profile → 完整部署）就能跑完。
+
 如果使用命令行自动化，可直接运行：
 
 ```bash
 ./netbird-server-tui.sh wizard
 ```
 
-复用已有 profile：
+复用已有 profile 的非交互链路：
 
 ```bash
 ./netbird-server-tui.sh --profile <name> status
