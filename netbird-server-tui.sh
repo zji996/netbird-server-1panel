@@ -36,7 +36,7 @@ Usage:
   $0 [--install-dir DIR] [--domain DOMAIN] [--dashboard-port PORT]
      [--server-port PORT] [--stun-port PORT] [--1panel-root-conf FILE]
      [--bind-address IP] [--public-scheme http|https] [--public-port PORT]
-     [--config FILE] [--lang zh|en] [--noninteractive] [--dry-run] [command]
+     [--profile NAME] [--config FILE] [--lang zh|en] [--noninteractive] [--dry-run] [command]
 
 Commands:
   menu                 Open TUI menu (default)
@@ -54,7 +54,7 @@ Commands:
   uninstall            Stop services and optionally remove data
   self-test            Run non-destructive local behavior tests
 
-Defaults are loaded from ./netbird-server.env when it exists.
+Profiles are stored under ./profiles and ignored by git.
 Environment overrides use NETBIRD_* names, for example NETBIRD_INSTALL_DIR.
 Language defaults to Chinese. Use --lang en or NETBIRD_LANG=en for English.
 EOF
@@ -64,6 +64,7 @@ load_config
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --profile) NETBIRD_PROFILE="$2"; load_config; shift 2 ;;
     --config) NETBIRD_CONFIG_FILE="$2"; load_config; shift 2 ;;
     --install-dir) INSTALL_DIR="$2"; shift 2 ;;
     --domain) DOMAIN="$2"; shift 2 ;;

@@ -48,7 +48,7 @@ msg() {
     en:wizard_title) echo "NetBird server setup" ;;
     en:wizard_form_msg) echo "Most deployments only need this page. Use https when 1Panel manages SSL; use http only for local/testing or a trusted private network." ;;
     en:wizard_actions_msg) echo "Choose what to do after saving settings" ;;
-    en:wizard_save_env) echo "Save netbird-server.env" ;;
+    en:wizard_save_env) echo "Save profile" ;;
     en:wizard_generate) echo "Generate service files" ;;
     en:wizard_apply_1panel) echo "Write 1Panel root.conf" ;;
     en:wizard_start) echo "Start containers" ;;
@@ -58,6 +58,13 @@ msg() {
     en:wizard_done) echo "Wizard finished." ;;
     en:advanced_title) echo "Advanced operations" ;;
     en:save_env_done) echo "Saved %s" ;;
+    en:profile_title) echo "Deployment profile" ;;
+    en:profile_prompt) echo "Use an existing profile or create a new one" ;;
+    en:profile_new) echo "Create new profile" ;;
+    en:profile_name_prompt) echo "Profile name" ;;
+    en:profile_loaded) echo "Loaded profile %s" ;;
+    en:profile_saved) echo "Saved profile %s" ;;
+    en:profile_none) echo "No profiles found; creating a new profile." ;;
     en:press_enter) echo "Press Enter to continue..." ;;
     en:reload_openresty) echo "Reload OpenResty container %s now?" ;;
     en:remove_config) echo "Remove generated config files in %s? Data is kept unless you confirm the next prompt." ;;
@@ -83,7 +90,7 @@ msg() {
     en:doctor_ok) echo "OK: %s" ;;
     en:doctor_warn) echo "Check: %s" ;;
     en:doctor_config_file) echo "Config file: %s" ;;
-    en:doctor_config_missing) echo "Config file not found; using built-in defaults. Copy netbird-server.env.example to netbird-server.env to customize." ;;
+    en:doctor_config_missing) echo "Config file/profile not found; using built-in defaults. Run the setup wizard to save a profile." ;;
     en:doctor_docker) echo "Docker command is available" ;;
     en:doctor_compose) echo "Docker Compose is available" ;;
     en:doctor_port_free) echo "TCP port %s is free on %s" ;;
@@ -148,7 +155,7 @@ msg() {
     zh:wizard_title) echo "NetBird 服务端部署向导" ;;
     zh:wizard_form_msg) echo "大多数部署只需要填这一页。1Panel 管 SSL 时用 https；仅本地测试或可信内网才建议 http。" ;;
     zh:wizard_actions_msg) echo "请选择保存后要自动执行的操作" ;;
-    zh:wizard_save_env) echo "保存 netbird-server.env" ;;
+    zh:wizard_save_env) echo "保存 profile" ;;
     zh:wizard_generate) echo "生成服务文件" ;;
     zh:wizard_apply_1panel) echo "写入 1Panel root.conf" ;;
     zh:wizard_start) echo "启动容器" ;;
@@ -158,6 +165,13 @@ msg() {
     zh:wizard_done) echo "向导已完成。" ;;
     zh:advanced_title) echo "高级操作" ;;
     zh:save_env_done) echo "已保存 %s" ;;
+    zh:profile_title) echo "部署 Profile" ;;
+    zh:profile_prompt) echo "请选择复用已有 profile，或新建 profile" ;;
+    zh:profile_new) echo "新建 profile" ;;
+    zh:profile_name_prompt) echo "Profile 名称" ;;
+    zh:profile_loaded) echo "已加载 profile：%s" ;;
+    zh:profile_saved) echo "已保存 profile：%s" ;;
+    zh:profile_none) echo "未发现 profile，将新建一个。" ;;
     zh:press_enter) echo "按 Enter 继续..." ;;
     zh:reload_openresty) echo "现在重载 OpenResty 容器 %s 吗？" ;;
     zh:remove_config) echo "删除 %s 中生成的配置文件吗？数据会保留，除非你在下一步确认删除。" ;;
@@ -183,7 +197,7 @@ msg() {
     zh:doctor_ok) echo "正常：%s" ;;
     zh:doctor_warn) echo "需确认：%s" ;;
     zh:doctor_config_file) echo "配置文件：%s" ;;
-    zh:doctor_config_missing) echo "未找到配置文件，正在使用内置默认值。可复制 netbird-server.env.example 为 netbird-server.env 后修改。" ;;
+    zh:doctor_config_missing) echo "未找到配置文件/profile，正在使用内置默认值。运行部署向导即可保存 profile。" ;;
     zh:doctor_docker) echo "Docker 命令可用" ;;
     zh:doctor_compose) echo "Docker Compose 可用" ;;
     zh:doctor_port_free) echo "%s:%s TCP 端口空闲" ;;

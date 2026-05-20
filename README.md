@@ -6,8 +6,9 @@
 
 ## 默认部署画像
 
-- 配置入口：`netbird-server.env`
-- 示例配置：`netbird-server.env.example`
+- 配置入口：TUI 中的 deployment profile
+- Profile 存储：`profiles/<name>/profile.env`，已被 `.gitignore` 忽略
+- 示例配置：`netbird-server.env.example`，仅作为自动化/开发参考
 - 部署目录：由 `NETBIRD_INSTALL_DIR` 控制，默认 `/root/netbird-docker`
 - 域名：由 `NETBIRD_DOMAIN` 控制，默认 `netbird.example.com`
 - Dashboard 本地端口：由 `NETBIRD_DASHBOARD_PORT` 控制，默认 `127.0.0.1:18084`
@@ -19,7 +20,8 @@
 ## 目录说明
 
 - `netbird-server-tui.sh`：服务端维护 TUI，一键生成、安装、查看、备份、卸载。
-- `netbird-server.env.example`：集中配置示例，复制为 `netbird-server.env` 后只改这一处。
+- `profiles/`：本机部署 profile 目录，内容不入库；复配时从 TUI 选择已有 profile。
+- `netbird-server.env.example`：配置示例，主要给自动化或人工排查参考，普通使用不需要直接编辑。
 - `lib/`：TUI 脚本模块，按通用工具、模板渲染、操作命令、菜单和自测拆分。
 - `docker-compose.yml`：脱敏后的当前 compose 摘要。
 - `1panel-openresty-root.conf`：脱敏后的当前 1Panel OpenResty location 摘要。
@@ -41,15 +43,7 @@ chmod +x ./netbird-server-tui.sh
 ./netbird-server-tui.sh
 ```
 
-主菜单默认进入“部署向导”。向导会在一个表单里配置大多数信息：域名、安装目录、HTTP/HTTPS、本地端口、STUN 端口和 1Panel `root.conf` 路径。随后用勾选项决定是否保存配置、生成服务文件、在 TUI 内预览 OpenResty 配置、写入 1Panel、启动容器。
-
-不想在 TUI 里逐项填，也可以先复制配置文件，只改你关心的几项：
-
-```bash
-cp netbird-server.env.example netbird-server.env
-${EDITOR:-nano} netbird-server.env
-./netbird-server-tui.sh doctor
-```
+主菜单默认进入“部署向导”。如果已经有 profile，向导会先问你是否复用；没有 profile 时会新建一个。随后在一个表单里配置大多数信息：域名、安装目录、HTTP/HTTPS、本地端口、STUN 端口和 1Panel `root.conf` 路径。最后用勾选项决定是否保存 profile、生成服务文件、在 TUI 内预览 OpenResty 配置、写入 1Panel、启动容器。
 
 最少操作路径：
 
@@ -61,6 +55,13 @@ ${EDITOR:-nano} netbird-server.env
 
 ```bash
 ./netbird-server-tui.sh wizard
+```
+
+复用已有 profile：
+
+```bash
+./netbird-server-tui.sh --profile <name> status
+./netbird-server-tui.sh --profile <name> install
 ```
 
 进入 TUI 时会先选择界面语言，默认中文。非交互模式也默认中文，可用 `--lang en` 或 `NETBIRD_LANG=en` 切换英文：
@@ -78,13 +79,13 @@ NETBIRD_LANG=en ./netbird-server-tui.sh --noninteractive status
 - `install`：生成服务文件并启动容器。
 - `doctor`：检查 Docker、Compose、本地端口、80/443、UDP STUN 提示和 1Panel 路径。
 
-推荐把长期配置写在 `netbird-server.env`，命令行参数只用于临时覆盖。脚本启动时会读取配置文件，随后按参数出现顺序应用命令行覆盖；当前 shell 中的 `NETBIRD_*` 环境变量也可用于自动化。
+推荐把长期配置保存成 profile。`profiles/` 下的实际 profile 已被 git ignore，可以放心保存本机路径、域名和端口。命令行参数只用于临时覆盖；自动化场景也可以使用 `--profile <name>`、`--config <file>` 或当前 shell 中的 `NETBIRD_*` 环境变量。
 
 ## HTTP/HTTPS
 
 默认是 `https`，适合 1Panel 已经为站点配置 SSL 的情况。脚本会检查 80/443 端口状态，提醒是否可能被占用。
 
-如果只是本机测试、可信内网，或者前面还有其他代理负责 TLS，可以在向导里把公网协议改为 `http`，或在 `netbird-server.env` 中设置：
+如果只是本机测试、可信内网，或者前面还有其他代理负责 TLS，可以在向导里把公网协议改为 `http`。自动化时也可以设置：
 
 ```bash
 NETBIRD_PUBLIC_SCHEME=http

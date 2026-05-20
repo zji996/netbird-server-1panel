@@ -1,6 +1,15 @@
 save_env_file() {
-  local file="${NETBIRD_CONFIG_FILE:-$SCRIPT_DIR/netbird-server.env}"
+  local profile="${ACTIVE_PROFILE:-${DOMAIN:-default}}"
+  profile="$(sanitize_profile_name "$profile")"
+  ACTIVE_PROFILE="$profile"
+  local file
+  if [[ -n "${NETBIRD_CONFIG_FILE:-}" ]]; then
+    file="$NETBIRD_CONFIG_FILE"
+  else
+    file="$(profile_file "$profile")"
+  fi
   cat > "$TMP_DIR/netbird-server.env" <<EOF
+NETBIRD_PROFILE=${profile}
 NETBIRD_DOMAIN=${DOMAIN}
 NETBIRD_INSTALL_DIR=${INSTALL_DIR}
 NETBIRD_DASHBOARD_PORT=${DASHBOARD_PORT}
@@ -14,7 +23,35 @@ NETBIRD_SERVER_IMAGE=${SERVER_IMAGE}
 NETBIRD_1PANEL_ROOT_CONF=${ONEPANEL_ROOT_CONF}
 EOF
   write_file "$file" "$TMP_DIR/netbird-server.env"
-  info "$(tf save_env_done "$file")"
+  info "$(tf profile_saved "$profile")"
+}
+
+choose_profile() {
+  local profiles=()
+  mapfile -t profiles < <(list_profiles)
+  if [[ ${#profiles[@]} -eq 0 ]]; then
+    info "$(msg profile_none)"
+    ACTIVE_PROFILE="$(sanitize_profile_name "$(tui_input "$(msg profile_name_prompt)" "${DOMAIN:-default}")")"
+    return 0
+  fi
+
+  local args=(new "$(msg profile_new)")
+  local p
+  for p in "${profiles[@]}"; do
+    args+=("$p" "$p")
+  done
+
+  local choice
+  choice="$(tui_menu "$(msg profile_prompt)" "${args[@]}")" || return 1
+  if [[ "$choice" == "new" ]]; then
+    ACTIVE_PROFILE="$(sanitize_profile_name "$(tui_input "$(msg profile_name_prompt)" "${DOMAIN:-default}")")"
+    return 0
+  fi
+
+  ACTIVE_PROFILE="$choice"
+  NETBIRD_PROFILE="$choice"
+  load_config
+  info "$(tf profile_loaded "$choice")"
 }
 
 port_note() {
@@ -77,6 +114,8 @@ setup_wizard() {
     install_flow
     return 0
   fi
+
+  choose_profile || return 0
 
   wizard_form || return 0
 

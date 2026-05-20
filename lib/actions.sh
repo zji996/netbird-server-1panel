@@ -54,7 +54,13 @@ port_is_free() {
 doctor_check() {
   info "$(msg doctor_title)"
 
-  local config_file="${NETBIRD_CONFIG_FILE:-$SCRIPT_DIR/netbird-server.env}"
+  local config_file="${NETBIRD_CONFIG_FILE:-}"
+  if [[ -z "$config_file" && -n "${NETBIRD_PROFILE:-}" ]]; then
+    config_file="$(profile_file "$NETBIRD_PROFILE")"
+  fi
+  if [[ -z "$config_file" ]]; then
+    config_file="$SCRIPT_DIR/netbird-server.env"
+  fi
   if [[ -f "$config_file" ]]; then
     info "$(tf doctor_config_file "$config_file")"
   else

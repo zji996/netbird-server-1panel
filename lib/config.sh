@@ -7,6 +7,29 @@ load_env_file() {
   set +a
 }
 
+profile_dir() {
+  echo "${NETBIRD_PROFILE_DIR:-$SCRIPT_DIR/profiles}"
+}
+
+profile_file() {
+  local name="$1"
+  echo "$(profile_dir)/$name/profile.env"
+}
+
+sanitize_profile_name() {
+  local raw="${1:-default}"
+  raw="${raw// /-}"
+  raw="$(printf '%s' "$raw" | tr -cd '[:alnum:]_.-')"
+  printf '%s' "${raw:-default}"
+}
+
+list_profiles() {
+  local dir
+  dir="$(profile_dir)"
+  [[ -d "$dir" ]] || return 0
+  find "$dir" -mindepth 2 -maxdepth 2 -name profile.env -printf '%h\n' 2>/dev/null | xargs -r -n1 basename | sort
+}
+
 derive_config() {
   ONEPANEL_ROOT_CONF="${ONEPANEL_ROOT_CONF:-/opt/1panel/apps/openresty/openresty/www/sites/${DOMAIN}/proxy/root.conf}"
 }
@@ -26,7 +49,13 @@ reset_config_values() {
 }
 
 load_config() {
-  local config_file="${NETBIRD_CONFIG_FILE:-$SCRIPT_DIR/netbird-server.env}"
+  local config_file="${NETBIRD_CONFIG_FILE:-}"
+  if [[ -z "$config_file" && -n "${NETBIRD_PROFILE:-}" ]]; then
+    config_file="$(profile_file "$NETBIRD_PROFILE")"
+  fi
+  if [[ -z "$config_file" ]]; then
+    config_file="$SCRIPT_DIR/netbird-server.env"
+  fi
   reset_config_values
   load_env_file "$config_file"
 

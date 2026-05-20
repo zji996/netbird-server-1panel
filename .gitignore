@@ -1,5 +1,7 @@
 # Runtime secrets and state
 netbird-server.env
+profiles/*
+!profiles/.gitkeep
 config.yaml
 dashboard.env
 data/
