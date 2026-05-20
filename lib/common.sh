@@ -191,8 +191,16 @@ random_secret() {
   openssl rand -base64 32 | tr -d '\n'
 }
 
+random_password() {
+  openssl rand -base64 24 | tr -d '\n' | tr '/+' '_-'
+}
+
 valid_port() {
   [[ "$1" =~ ^[0-9]+$ ]] && (( "$1" >= 1 && "$1" <= 65535 ))
+}
+
+valid_email() {
+  [[ "$1" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]
 }
 
 check_settings() {
@@ -204,6 +212,7 @@ check_settings() {
   valid_port "$PUBLIC_PORT" || errs+=("$(tf err_public_port "$PUBLIC_PORT")")
   [[ "$DASHBOARD_PORT" != "$SERVER_PORT" ]] || errs+=("$(msg err_same_ports)")
   [[ "$PUBLIC_SCHEME" == "http" || "$PUBLIC_SCHEME" == "https" ]] || errs+=("$(tf err_public_scheme "$PUBLIC_SCHEME")")
+  valid_email "$ADMIN_EMAIL" || errs+=("$(tf err_admin_email "$ADMIN_EMAIL")")
   if (( ${#errs[@]} > 0 )); then
     printf '%s\n' "${errs[@]}"
     return 1
@@ -227,6 +236,7 @@ prompt_settings() {
   BIND_ADDRESS="$(tui_input "$(msg prompt_bind_address)" "$BIND_ADDRESS")"
   PUBLIC_SCHEME="$(tui_input "$(msg prompt_public_scheme)" "$PUBLIC_SCHEME")"
   PUBLIC_PORT="$(tui_input "$(msg prompt_public_port)" "$PUBLIC_PORT")"
+  ADMIN_EMAIL="$(tui_input "$(msg prompt_admin_email)" "$ADMIN_EMAIL")"
   ONEPANEL_ROOT_CONF="$(tui_input "$(msg prompt_1panel_path)" "$ONEPANEL_ROOT_CONF")"
   validate_settings
 }
@@ -263,6 +273,58 @@ existing_encryption_key_or_new() {
     return 0
   fi
   random_secret
+}
+
+admin_credentials_file() {
+  printf '%s/admin-credentials.txt' "$INSTALL_DIR"
+}
+
+existing_admin_password_or_new() {
+  local file
+  file="$(admin_credentials_file)"
+  if [[ -f "$file" ]]; then
+    local existing_password
+    existing_password="$(awk -F': ' '$1 == "Password" {print $2; exit}' "$file" 2>/dev/null || true)"
+    if [[ -n "$existing_password" ]]; then
+      printf '%s' "$existing_password"
+      return 0
+    fi
+  fi
+  random_password
+}
+
+admin_password_from_credentials() {
+  local file
+  file="$(admin_credentials_file)"
+  [[ -f "$file" ]] || return 0
+  awk -F': ' '$1 == "Password" {print $2; exit}' "$file" 2>/dev/null || true
+}
+
+write_admin_credentials() {
+  local password="$1"
+  local file
+  file="$(admin_credentials_file)"
+  local existed="false"
+  [[ -f "$file" ]] && existed="true"
+
+  local old_umask
+  old_umask="$(umask)"
+  umask 077
+  cat > "$TMP_DIR/admin-credentials.txt" <<EOF
+NetBird admin account
+
+URL: ${PUBLIC_SCHEME}://${DOMAIN}
+Email: ${ADMIN_EMAIL}
+Password: ${password}
+EOF
+  umask "$old_umask"
+  write_file "$file" "$TMP_DIR/admin-credentials.txt"
+  chmod 600 "$file" 2>/dev/null || true
+  if [[ "$existed" == "true" ]]; then
+    info "$(tf admin_credentials_reused "$file")"
+  else
+    info "$(tf admin_credentials_created "$file" "$ADMIN_EMAIL")"
+  fi
 }
 
 backup_file_if_exists() {

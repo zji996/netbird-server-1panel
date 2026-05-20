@@ -1,9 +1,10 @@
 render_files() {
   validate_settings
   require_cmd openssl
-  local relay_secret encryption_key
+  local relay_secret encryption_key admin_password
   relay_secret="$(existing_secret_or_new)"
   encryption_key="$(existing_encryption_key_or_new)"
+  admin_password="$(existing_admin_password_or_new)"
 
   mkdir -p "$INSTALL_DIR/data"
   render_compose > "$TMP_DIR/docker-compose.yml"
@@ -13,6 +14,7 @@ render_files() {
   write_file "$INSTALL_DIR/docker-compose.yml" "$TMP_DIR/docker-compose.yml"
   write_file "$INSTALL_DIR/config.yaml" "$TMP_DIR/config.yaml"
   write_file "$INSTALL_DIR/dashboard.env" "$TMP_DIR/dashboard.env"
+  write_admin_credentials "$admin_password"
   info "$(tf rendered_files "$INSTALL_DIR")"
 }
 
@@ -103,7 +105,7 @@ doctor_check() {
       info "$(tf doctor_warn "$(tf doctor_public_port_busy "$PUBLIC_PORT")")"
     fi
   else
-    info "$(tf doctor_warn "$(msg doctor_http_mode)")"
+    info "$(msg doctor_http_mode)"
     if port_is_free "0.0.0.0" "$PUBLIC_PORT"; then
       info "$(tf doctor_ok "$(tf doctor_public_port_free "$PUBLIC_PORT")")"
     else
@@ -112,6 +114,7 @@ doctor_check() {
   fi
 
   info "$(tf doctor_warn "$(tf doctor_udp_note "$STUN_PORT")")"
+  info "$(tf doctor_firewall_manual "$(firewall_tcp_ports_label)" "$STUN_PORT")"
   info "$(tf doctor_install_dir "$INSTALL_DIR")"
   info "$(tf doctor_1panel_path "$ONEPANEL_ROOT_CONF")"
   info "$(msg doctor_summary)"
@@ -119,7 +122,7 @@ doctor_check() {
 
 show_status() {
   info "$(tf status_install_dir "$INSTALL_DIR")"
-  info "$(tf status_domain "$DOMAIN")"
+  info "$(tf status_domain "$PUBLIC_SCHEME" "$DOMAIN")"
   info "$(tf status_dashboard "$DASHBOARD_PORT")"
   info "$(tf status_server "$SERVER_PORT")"
   info "$(tf status_stun "$STUN_PORT")"
@@ -130,7 +133,7 @@ show_status() {
   fi
   endpoint_check "$(msg endpoint_dashboard)" "http://127.0.0.1:${DASHBOARD_PORT}/"
   endpoint_check "$(msg endpoint_oidc_local)" "http://127.0.0.1:${SERVER_PORT}/oauth2/.well-known/openid-configuration"
-  endpoint_check "$(msg endpoint_oidc_public)" "https://${DOMAIN}/oauth2/.well-known/openid-configuration"
+  endpoint_check "$(msg endpoint_oidc_public)" "${PUBLIC_SCHEME}://${DOMAIN}/oauth2/.well-known/openid-configuration"
   if [[ -f "$ONEPANEL_ROOT_CONF" ]]; then
     info "$(tf root_conf_exists "$ONEPANEL_ROOT_CONF")"
   else
@@ -189,15 +192,204 @@ backup_installation() {
   info "$(tf backup_archive "$archive")"
 }
 
+join_csv() {
+  local result="" item
+  for item in "$@"; do
+    if [[ -n "$result" ]]; then
+      result+=", "
+    fi
+    result+="$item"
+  done
+  printf '%s' "$result"
+}
+
+firewall_tcp_ports() {
+  printf '%s\n' "$PUBLIC_PORT"
+  if [[ "$PUBLIC_SCHEME" == "https" && "$PUBLIC_PORT" != "80" ]]; then
+    printf '80\n'
+  fi
+}
+
+firewall_tcp_ports_label() {
+  local ports=()
+  mapfile -t ports < <(firewall_tcp_ports)
+  join_csv "${ports[@]}"
+}
+
+open_firewall_ports() {
+  local tcp_ports=()
+  local udp_port="$STUN_PORT"
+  local tcp_label
+  mapfile -t tcp_ports < <(firewall_tcp_ports)
+  tcp_label="$(join_csv "${tcp_ports[@]}")"
+  if [[ "$DRY_RUN" == "true" ]]; then
+    info "$(tf firewall_skipped "$tcp_label" "$udp_port")"
+    return 0
+  fi
+
+  if command -v firewall-cmd >/dev/null 2>&1 && firewall-cmd --state >/dev/null 2>&1; then
+    local ok="true" tcp_port
+    for tcp_port in "${tcp_ports[@]}"; do
+      maybe_sudo firewall-cmd --permanent --add-port="${tcp_port}/tcp" || ok="false"
+    done
+    maybe_sudo firewall-cmd --permanent --add-port="${udp_port}/udp" || ok="false"
+    maybe_sudo firewall-cmd --reload || ok="false"
+    if [[ "$ok" == "true" ]]; then
+      info "$(tf firewall_opened firewalld "$tcp_label" "$udp_port")"
+      return 0
+    fi
+    warn "$(tf firewall_failed firewalld "$tcp_label" "$udp_port")"
+    return 1
+  fi
+
+  if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | rg -q '^Status: active'; then
+    local ok="true" tcp_port
+    for tcp_port in "${tcp_ports[@]}"; do
+      maybe_sudo ufw allow "${tcp_port}/tcp" || ok="false"
+    done
+    maybe_sudo ufw allow "${udp_port}/udp" || ok="false"
+    if [[ "$ok" == "true" ]]; then
+      info "$(tf firewall_opened ufw "$tcp_label" "$udp_port")"
+      return 0
+    fi
+    warn "$(tf firewall_failed ufw "$tcp_label" "$udp_port")"
+    return 1
+  fi
+
+  warn "$(tf firewall_manual "$tcp_label" "$udp_port")"
+  return 0
+}
+
+local_api_host() {
+  case "${BIND_ADDRESS:-127.0.0.1}" in
+    0.0.0.0|"::"|"[::]"|"*") printf '127.0.0.1' ;;
+    *) printf '%s' "$BIND_ADDRESS" ;;
+  esac
+}
+
+local_api_url() {
+  local path="$1"
+  local host
+  host="$(local_api_host)"
+  if [[ "$host" == *:* && "$host" != \[*\] ]]; then
+    host="[$host]"
+  fi
+  printf 'http://%s:%s%s' "$host" "$SERVER_PORT" "$path"
+}
+
+setup_initial_admin() {
+  require_cmd curl
+  require_cmd python3
+  local password
+  password="$(admin_password_from_credentials)"
+  if [[ -z "$password" ]]; then
+    warn "$(tf admin_setup_failed "$(admin_credentials_file)")"
+    return 1
+  fi
+
+  local status_url setup_url body http_code payload
+  status_url="$(local_api_url /api/instance)"
+  setup_url="$(local_api_url /api/setup)"
+
+  local i
+  for i in {1..60}; do
+    body="$(curl -sS --max-time 3 "$status_url" 2>/dev/null || true)"
+    if [[ "$body" == *'"setup_required":true'* ]]; then
+      payload="$(python3 - "$ADMIN_EMAIL" "$password" <<'PY'
+import json
+import sys
+
+print(json.dumps({
+    "email": sys.argv[1],
+    "password": sys.argv[2],
+    "name": "NetBird Admin",
+    "create_pat": False,
+}))
+PY
+)"
+      http_code="$(curl -sS -o "$TMP_DIR/admin-setup-response.json" -w '%{http_code}' --max-time 10 \
+        -H 'Content-Type: application/json' -d "$payload" "$setup_url" 2>/dev/null || true)"
+      if [[ "$http_code" =~ ^2 ]]; then
+        info "$(tf admin_setup_done "$ADMIN_EMAIL" "$(admin_credentials_file)")"
+        return 0
+      fi
+      warn "$(tf admin_setup_http_failed "$http_code" "$setup_url")"
+      return 1
+    fi
+    if [[ "$body" == *'"setup_required":false'* ]]; then
+      info "$(msg admin_setup_skipped)"
+      return 0
+    fi
+    sleep 2
+  done
+
+  warn "$(tf admin_setup_not_ready "$status_url")"
+  return 1
+}
+
 uninstall_installation() {
   if [[ -f "$INSTALL_DIR/docker-compose.yml" ]]; then
-    run_compose down || true
+    if [[ "$DRY_RUN" == "true" ]]; then
+      info "$(tf dry_run_compose_down "$INSTALL_DIR")"
+    else
+      run_compose down || true
+    fi
   fi
-  if tui_yesno "$(tf remove_config "$INSTALL_DIR")"; then
-    rm -f "$INSTALL_DIR/docker-compose.yml" "$INSTALL_DIR/config.yaml" "$INSTALL_DIR/dashboard.env"
+
+  local generated_files=(
+    "$INSTALL_DIR/docker-compose.yml"
+    "$INSTALL_DIR/config.yaml"
+    "$INSTALL_DIR/dashboard.env"
+    "$(admin_credentials_file)"
+  )
+  if [[ -d "$INSTALL_DIR" ]]; then
+    local nullglob_was_set="false"
+    if shopt -q nullglob; then
+      nullglob_was_set="true"
+    fi
+    shopt -s nullglob
+    generated_files+=(
+      "$INSTALL_DIR"/docker-compose.yml.bak.*
+      "$INSTALL_DIR"/config.yaml.bak.*
+      "$INSTALL_DIR"/dashboard.env.bak.*
+      "$INSTALL_DIR"/admin-credentials.txt.bak.*
+    )
+    [[ "$nullglob_was_set" == "true" ]] || shopt -u nullglob
   fi
-  if tui_yesno "$(tf remove_data "$INSTALL_DIR")"; then
-    rm -rf "$INSTALL_DIR/data"
+  local generated_exists="false" file
+  for file in "${generated_files[@]}"; do
+    [[ -e "$file" ]] && generated_exists="true"
+  done
+  if [[ "$generated_exists" == "true" ]] && tui_yesno "$(tf remove_config "$INSTALL_DIR")"; then
+    if [[ "$DRY_RUN" == "true" ]]; then
+      for file in "${generated_files[@]}"; do
+        [[ -e "$file" ]] && info "$(tf dry_run_remove "$file")"
+      done
+    else
+      rm -f "${generated_files[@]}"
+    fi
+  fi
+
+  if [[ -d "$INSTALL_DIR/data" ]] && tui_yesno "$(tf remove_data "$INSTALL_DIR")"; then
+    if [[ "$DRY_RUN" == "true" ]]; then
+      info "$(tf dry_run_remove "$INSTALL_DIR/data")"
+    else
+      rm -rf "$INSTALL_DIR/data"
+    fi
+  fi
+
+  if [[ -f "$ONEPANEL_ROOT_CONF" ]] && tui_yesno "$(tf remove_1panel_conf "$ONEPANEL_ROOT_CONF")" no; then
+    if [[ "$DRY_RUN" == "true" ]]; then
+      info "$(tf dry_run_remove "$ONEPANEL_ROOT_CONF")"
+    else
+      local backup="${ONEPANEL_ROOT_CONF}.bak.$(date +%Y%m%d%H%M%S)"
+      info "$(tf backup_file "$ONEPANEL_ROOT_CONF" "$backup")"
+      maybe_sudo cp -a "$ONEPANEL_ROOT_CONF" "$backup"
+      maybe_sudo rm -f "$ONEPANEL_ROOT_CONF"
+    fi
+  fi
+  if [[ "$DRY_RUN" != "true" ]]; then
+    rmdir "$INSTALL_DIR" 2>/dev/null || true
   fi
   info "$(msg uninstall_done)"
 }
@@ -215,6 +407,8 @@ install_flow() {
     validate_settings
   fi
   render_files
+  open_firewall_ports || true
   start_services
+  setup_initial_admin || true
   show_status
 }

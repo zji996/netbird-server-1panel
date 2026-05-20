@@ -20,6 +20,7 @@ NETBIRD_STUN_PORT=${STUN_PORT}
 NETBIRD_BIND_ADDRESS=${BIND_ADDRESS}
 NETBIRD_PUBLIC_SCHEME=${PUBLIC_SCHEME}
 NETBIRD_PUBLIC_PORT=${PUBLIC_PORT}
+NETBIRD_ADMIN_EMAIL=${ADMIN_EMAIL}
 NETBIRD_DASHBOARD_IMAGE=${DASHBOARD_IMAGE}
 NETBIRD_SERVER_IMAGE=${SERVER_IMAGE}
 NETBIRD_1PANEL_ROOT_CONF=${ONEPANEL_ROOT_CONF}
@@ -53,6 +54,7 @@ profile_summary_text() {
   printf '%-18s %s\n' "$(msg summary_field_profile):" "$profile_label"
   printf '%-18s %s\n' "$(msg summary_field_domain):" "$DOMAIN"
   printf '%-18s %s\n' "$(msg summary_field_public):" "${PUBLIC_SCHEME}://${DOMAIN}:${PUBLIC_PORT}"
+  printf '%-18s %s\n' "$(msg summary_field_admin):" "$ADMIN_EMAIL"
   printf '%-18s %s\n' "$(msg summary_field_install):" "$INSTALL_DIR"
   printf '%-18s %s\n' "$(msg summary_field_dashboard):" "${BIND_ADDRESS}:${DASHBOARD_PORT}"
   printf '%-18s %s\n' "$(msg summary_field_server):" "${BIND_ADDRESS}:${SERVER_PORT}"
@@ -125,6 +127,7 @@ wiz_review_existing() {
 wiz_essentials() {
   while true; do
     local previous_domain="$DOMAIN"
+    local previous_admin_email="$ADMIN_EMAIL"
     local values
     values="$(tui_form "$(msg wizard_essentials_title)" "$(msg wizard_essentials_msg)" \
       "$(msg prompt_domain)" 1 1 "$DOMAIN" 1 32 48 0 \
@@ -136,6 +139,11 @@ wiz_essentials() {
     DOMAIN="${fields[0]:-$DOMAIN}"
     PUBLIC_SCHEME="${fields[1]:-$PUBLIC_SCHEME}"
     INSTALL_DIR="${fields[2]:-$INSTALL_DIR}"
+
+    if [[ "${ADMIN_EMAIL_DERIVED_DEFAULT:-false}" == "true" || "$previous_admin_email" == "admin@${previous_domain}" ]]; then
+      ADMIN_EMAIL="admin@${DOMAIN}"
+      ADMIN_EMAIL_DERIVED_DEFAULT="true"
+    fi
 
     local previous_default current_default
     previous_default="$(default_onepanel_root_conf "$previous_domain")"
@@ -174,8 +182,9 @@ wiz_advanced() {
       "$(msg prompt_stun_port)" 3 1 "$STUN_PORT" 3 36 8 0 \
       "$(msg prompt_bind_address)" 4 1 "$BIND_ADDRESS" 4 36 16 0 \
       "$(msg prompt_public_port)" 5 1 "$PUBLIC_PORT" 5 36 8 0 \
-      "$(msg prompt_1panel_path)" 6 1 "$ONEPANEL_ROOT_CONF" 6 36 48 0 \
-      "$(msg wizard_advanced_profile_label)" 7 1 "$profile_default" 7 36 48 0)" || return 1
+      "$(msg prompt_admin_email)" 6 1 "$ADMIN_EMAIL" 6 36 48 0 \
+      "$(msg prompt_1panel_path)" 7 1 "$ONEPANEL_ROOT_CONF" 7 36 48 0 \
+      "$(msg wizard_advanced_profile_label)" 8 1 "$profile_default" 8 36 48 0)" || return 1
 
     local fields
     mapfile -t fields <<< "$values"
@@ -184,10 +193,12 @@ wiz_advanced() {
     STUN_PORT="${fields[2]:-$STUN_PORT}"
     BIND_ADDRESS="${fields[3]:-$BIND_ADDRESS}"
     PUBLIC_PORT="${fields[4]:-$PUBLIC_PORT}"
-    ONEPANEL_ROOT_CONF="${fields[5]:-}"
+    ADMIN_EMAIL="${fields[5]:-$ADMIN_EMAIL}"
+    ADMIN_EMAIL_DERIVED_DEFAULT="false"
+    ONEPANEL_ROOT_CONF="${fields[6]:-}"
     derive_config
 
-    local new_profile="${fields[6]:-$profile_default}"
+    local new_profile="${fields[7]:-$profile_default}"
     new_profile="$(sanitize_profile_name "$new_profile")"
     [[ -n "$new_profile" ]] && ACTIVE_PROFILE="$new_profile"
 
@@ -235,7 +246,9 @@ wiz_execute() {
       save_profile_env
       render_files
       apply_1panel_conf
+      open_firewall_ports || true
       start_services
+      setup_initial_admin || true
       show_status || true
       ;;
     render)
