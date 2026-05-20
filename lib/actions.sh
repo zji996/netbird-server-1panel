@@ -407,13 +407,9 @@ uninstall_installation() {
 
 install_flow() {
   if ! check_settings >/dev/null; then
-    if has_form_tui; then
+    if has_tui; then
       setup_wizard
       return
-    fi
-    if has_tui; then
-      warn "$(msg dialog_required)"
-      return 1
     fi
     validate_settings
   fi

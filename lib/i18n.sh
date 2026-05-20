@@ -47,8 +47,11 @@ msg() {
     en:err_public_port) echo "Invalid public port: %s" ;;
     en:err_public_scheme) echo "Invalid public scheme: %s" ;;
     en:err_admin_email) echo "Invalid admin email: %s" ;;
-    en:dialog_required) echo "The setup wizard requires 'dialog' for form screens. Install it and rerun: sudo apt-get update && sudo apt-get install -y dialog" ;;
-    en:form_nav_hint) echo "Keys: Up/Down moves between fields; Tab moves to OK/Cancel; Enter confirms. Mouse clicks work when your terminal supports them." ;;
+    en:wizard_interactive_required) echo "The setup wizard needs an interactive terminal. Use --config or --profile for noninteractive runs." ;;
+    en:form_nav_hint) echo "Press Enter to keep the value in brackets. Type a new value to change it." ;;
+    en:tui_choice_prompt) echo "Choose a number [%s]: " ;;
+    en:tui_invalid_choice) echo "Please enter a number in range: %s" ;;
+    en:tui_invalid_yesno) echo "Please answer y or n." ;;
     en:progress_step) echo "[%s/%s] %s" ;;
     en:progress_save_profile) echo "Saving profile" ;;
     en:progress_render_files) echo "Generating compose/config/admin account files" ;;
@@ -215,8 +218,11 @@ msg() {
     zh:err_public_port) echo "公网端口无效：%s" ;;
     zh:err_public_scheme) echo "公网协议无效：%s" ;;
     zh:err_admin_email) echo "管理员邮箱无效：%s" ;;
-    zh:dialog_required) echo "部署向导需要安装 dialog 才能显示表单。请先执行：sudo apt-get update && sudo apt-get install -y dialog，然后重新运行脚本。" ;;
-    zh:form_nav_hint) echo "按键提示：上下方向键切换字段；Tab 切到 OK/Cancel；Enter 确认。若终端支持鼠标，也可以直接点击按钮。" ;;
+    zh:wizard_interactive_required) echo "部署向导需要交互式终端；非交互运行请使用 --config 或 --profile。" ;;
+    zh:form_nav_hint) echo "直接回车保留方括号里的默认值；输入新值则覆盖。" ;;
+    zh:tui_choice_prompt) echo "请输入序号 [%s]：" ;;
+    zh:tui_invalid_choice) echo "请输入范围内的数字：%s" ;;
+    zh:tui_invalid_yesno) echo "请输入 y 或 n。" ;;
     zh:progress_step) echo "[%s/%s] %s" ;;
     zh:progress_save_profile) echo "保存 profile" ;;
     zh:progress_render_files) echo "生成 compose/config/管理员账号文件" ;;

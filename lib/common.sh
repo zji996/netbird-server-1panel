@@ -17,31 +17,7 @@ require_cmd() {
 }
 
 has_tui() {
-  [[ -t 0 && "$NONINTERACTIVE" != "true" ]] && { command -v whiptail >/dev/null 2>&1 || command -v dialog >/dev/null 2>&1 || command -v fzf >/dev/null 2>&1; }
-}
-
-has_form_tui() {
-  [[ -t 0 && "$NONINTERACTIVE" != "true" ]] && command -v dialog >/dev/null 2>&1
-}
-
-dialog_supports_mouse() {
-  [[ "${DIALOG_MOUSE_SUPPORT:-}" == "yes" ]] && return 0
-  [[ "${DIALOG_MOUSE_SUPPORT:-}" == "no" ]] && return 1
-  if dialog --help 2>&1 | grep -q -- '--mouse'; then
-    DIALOG_MOUSE_SUPPORT="yes"
-    return 0
-  fi
-  DIALOG_MOUSE_SUPPORT="no"
-  return 1
-}
-
-dialog_with_title() {
-  local title="$1"; shift
-  local args=(--title "$title")
-  if dialog_supports_mouse; then
-    args=(--mouse "${args[@]}")
-  fi
-  dialog "${args[@]}" "$@"
+  [[ -t 0 && "$NONINTERACTIVE" != "true" ]]
 }
 
 progress_step() {
@@ -53,20 +29,30 @@ progress_step() {
 
 tui_menu() {
   local title="$1"; shift
-  if command -v whiptail >/dev/null 2>&1; then
-    whiptail --title "$APP_NAME" --menu "$title" 20 76 10 "$@" 3>&1 1>&2 2>&3
-  elif command -v dialog >/dev/null 2>&1; then
-    dialog_with_title "$APP_NAME" --menu "$title" 20 76 10 "$@" 3>&1 1>&2 2>&3
-  elif command -v fzf >/dev/null 2>&1; then
-    local lines=()
-    while [[ $# -gt 0 ]]; do
-      lines+=("$1 $2")
-      shift 2
+  has_tui || return 1
+  local tags=() labels=()
+  while [[ $# -gt 0 ]]; do
+    tags+=("$1")
+    labels+=("${2:-}")
+    shift 2
+  done
+  ((${#tags[@]} > 0)) || return 1
+
+  local i answer default=1
+  while true; do
+    printf '\n== %s ==\n' "$title" >&2
+    for i in "${!tags[@]}"; do
+      printf '  %d) %s  %s\n' "$((i + 1))" "${tags[$i]}" "${labels[$i]}" >&2
     done
-    printf '%s\n' "${lines[@]}" | fzf --prompt="$title > " | awk '{print $1}'
-  else
-    return 1
-  fi
+    printf '%s' "$(tf tui_choice_prompt "$default")" >&2
+    IFS= read -r answer || return 1
+    answer="${answer:-$default}"
+    if [[ "$answer" =~ ^[0-9]+$ ]] && ((answer >= 1 && answer <= ${#tags[@]})); then
+      printf '%s\n' "${tags[$((answer - 1))]}"
+      return 0
+    fi
+    warn "$(tf tui_invalid_choice "1-${#tags[@]}")"
+  done
 }
 
 tui_yesno() {
@@ -89,33 +75,23 @@ tui_yesno_choice() {
     fi
     return 0
   fi
-  if command -v whiptail >/dev/null 2>&1; then
-    local args=(--title "$APP_NAME")
-    [[ "$default" == "no" ]] && args+=(--defaultno)
-    whiptail "${args[@]}" --yesno "$message" 12 72
-    rc=$?
-  elif command -v dialog >/dev/null 2>&1; then
-    local args=(--title "$APP_NAME")
-    [[ "$default" == "no" ]] && args+=(--defaultno)
-    if dialog_supports_mouse; then
-      args=(--mouse "${args[@]}")
-    fi
-    dialog "${args[@]}" --yesno "$message" 12 72
-    rc=$?
+  has_tui || return 1
+  local answer hint
+  if [[ "$default" == "yes" ]]; then
+    hint="Y/n"
   else
-    read -r -p "$message [y/N] " answer
-    if [[ "$answer" =~ ^[Yy]$ ]]; then
-      printf 'yes'
-    else
-      printf 'no'
-    fi
-    return 0
+    hint="y/N"
   fi
-  case "$rc" in
-    0) printf 'yes' ;;
-    1) printf 'no' ;;
-    *) printf 'cancel'; return 1 ;;
-  esac
+  while true; do
+    printf '\n%s [%s] ' "$message" "$hint" >&2
+    IFS= read -r answer || return 1
+    answer="${answer:-$default}"
+    case "$answer" in
+      y|Y|yes|YES) printf 'yes'; return 0 ;;
+      n|N|no|NO) printf 'no'; return 0 ;;
+      *) warn "$(msg tui_invalid_yesno)" ;;
+    esac
+  done
 }
 
 tui_input() {
@@ -125,47 +101,75 @@ tui_input() {
     printf '%s\n' "$default"
     return 0
   fi
-  if command -v whiptail >/dev/null 2>&1; then
-    whiptail --title "$APP_NAME" --inputbox "$prompt" 10 72 "$default" 3>&1 1>&2 2>&3
-  elif command -v dialog >/dev/null 2>&1; then
-    dialog_with_title "$APP_NAME" --inputbox "$prompt" 10 72 "$default" 3>&1 1>&2 2>&3
-  else
-    read -r -p "$prompt [$default] " answer
-    printf '%s\n' "${answer:-$default}"
-  fi
+  has_tui || return 1
+  printf '%s [%s]\n> ' "$prompt" "$default" >&2
+  IFS= read -r answer || return 1
+  printf '%s\n' "${answer:-$default}"
 }
 
 tui_form() {
   local title="$1"
   local message="$2"
   shift 2
-  if command -v dialog >/dev/null 2>&1; then
-    dialog_with_title "$APP_NAME" --form "$message" 24 92 14 "$@" 3>&1 1>&2 2>&3
-  else
-    return 1
-  fi
+  has_tui || return 1
+  printf '\n== %s ==\n%s\n\n' "$title" "$message" >&2
+  local answers=() label default value
+  while [[ $# -gt 0 ]]; do
+    label="$1"
+    default="$4"
+    value="$(tui_input "$label" "$default")" || return 1
+    answers+=("$value")
+    shift 8
+  done
+  printf '%s\n' "${answers[@]}"
 }
 
 tui_checklist() {
   local message="$1"; shift
-  if command -v whiptail >/dev/null 2>&1; then
-    whiptail --title "$APP_NAME" --checklist "$message" 18 82 8 "$@" 3>&1 1>&2 2>&3
-  elif command -v dialog >/dev/null 2>&1; then
-    dialog_with_title "$APP_NAME" --checklist "$message" 18 82 8 "$@" 3>&1 1>&2 2>&3
-  else
-    return 1
-  fi
+  has_tui || return 1
+  printf '\n%s\n' "$message" >&2
+  local selected=() tag label status default choice
+  while [[ $# -gt 0 ]]; do
+    tag="$1"
+    label="$2"
+    status="${3:-OFF}"
+    default="no"
+    [[ "$status" == "ON" ]] && default="yes"
+    choice="$(tui_yesno_choice "$tag  $label" "$default")" || return 1
+    [[ "$choice" == "yes" ]] && selected+=("$tag")
+    shift 3
+  done
+  printf '%s\n' "${selected[@]}"
 }
 
 tui_radiolist() {
   local message="$1"; shift
-  if command -v whiptail >/dev/null 2>&1; then
-    whiptail --title "$APP_NAME" --radiolist "$message" 22 84 10 "$@" 3>&1 1>&2 2>&3
-  elif command -v dialog >/dev/null 2>&1; then
-    dialog_with_title "$APP_NAME" --radiolist "$message" 22 84 10 "$@" 3>&1 1>&2 2>&3
-  else
-    return 1
-  fi
+  has_tui || return 1
+  local tags=() labels=() default=1 index=1
+  while [[ $# -gt 0 ]]; do
+    tags+=("$1")
+    labels+=("$2")
+    [[ "${3:-OFF}" == "ON" ]] && default="$index"
+    index=$((index + 1))
+    shift 3
+  done
+  ((${#tags[@]} > 0)) || return 1
+
+  local i answer
+  while true; do
+    printf '\n%s\n' "$message" >&2
+    for i in "${!tags[@]}"; do
+      printf '  %d) %s  %s\n' "$((i + 1))" "${tags[$i]}" "${labels[$i]}" >&2
+    done
+    printf '%s' "$(tf tui_choice_prompt "$default")" >&2
+    IFS= read -r answer || return 1
+    answer="${answer:-$default}"
+    if [[ "$answer" =~ ^[0-9]+$ ]] && ((answer >= 1 && answer <= ${#tags[@]})); then
+      printf '%s\n' "${tags[$((answer - 1))]}"
+      return 0
+    fi
+    warn "$(tf tui_invalid_choice "1-${#tags[@]}")"
+  done
 }
 
 tui_msgbox() {
@@ -174,25 +178,17 @@ tui_msgbox() {
     info "$message"
     return 0
   fi
-  if command -v whiptail >/dev/null 2>&1; then
-    whiptail --title "$APP_NAME" --msgbox "$message" 14 76
-  elif command -v dialog >/dev/null 2>&1; then
-    dialog_with_title "$APP_NAME" --msgbox "$message" 14 76
-  else
-    printf '%s\n' "$message"
+  printf '\n%s\n' "$message" >&2
+  if has_tui; then
+    read -r -p "$(msg press_enter)" _
   fi
 }
 
 tui_textbox() {
   local file="$1"
   local title="${2:-$APP_NAME}"
-  if command -v whiptail >/dev/null 2>&1; then
-    whiptail --title "$title" --textbox "$file" 28 100
-  elif command -v dialog >/dev/null 2>&1; then
-    dialog_with_title "$title" --textbox "$file" 28 100
-  else
-    ${PAGER:-less} "$file"
-  fi
+  printf '\n== %s ==\n' "$title" >&2
+  cat "$file" >&2
 }
 
 maybe_sudo() {

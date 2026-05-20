@@ -291,8 +291,8 @@ wiz_delete_current() {
 }
 
 setup_wizard() {
-  if ! has_form_tui; then
-    warn "$(msg dialog_required)"
+  if ! has_tui; then
+    warn "$(msg wizard_interactive_required)"
     return 1
   fi
 
