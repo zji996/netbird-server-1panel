@@ -53,7 +53,7 @@ profile_summary_text() {
   [[ -z "$onepanel" ]] && onepanel="(auto)"
   printf '%-18s %s\n' "$(msg summary_field_profile):" "$profile_label"
   printf '%-18s %s\n' "$(msg summary_field_domain):" "$DOMAIN"
-  printf '%-18s %s\n' "$(msg summary_field_public):" "${PUBLIC_SCHEME}://${DOMAIN}:${PUBLIC_PORT}"
+  printf '%-18s %s\n' "$(msg summary_field_public):" "$(public_origin)"
   printf '%-18s %s\n' "$(msg summary_field_admin):" "$ADMIN_EMAIL"
   printf '%-18s %s\n' "$(msg summary_field_install):" "$INSTALL_DIR"
   printf '%-18s %s\n' "$(msg summary_field_dashboard):" "${BIND_ADDRESS}:${DASHBOARD_PORT}"

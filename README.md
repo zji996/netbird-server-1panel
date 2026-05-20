@@ -10,8 +10,9 @@
 - Profile 存储：`profiles/<name>/profile.env`，已被 `.gitignore` 忽略
 - 示例配置：`netbird-server.env.example`，仅作为自动化/开发参考
 - 部署目录：由 `NETBIRD_INSTALL_DIR` 控制，默认 `/root/netbird-docker`
-- 域名：由 `NETBIRD_DOMAIN` 控制，默认 `netbird.example.com`
+- 域名：由 `NETBIRD_DOMAIN` 控制，默认 `netbird.example.com`；建议只填纯域名，公网端口单独用 `NETBIRD_PUBLIC_PORT`
 - 对外访问协议：由 `NETBIRD_PUBLIC_SCHEME` 控制，默认 `http`
+- 对外公网端口：由 `NETBIRD_PUBLIC_PORT` 控制，默认 `80`
 - Dashboard 本地端口：由 `NETBIRD_DASHBOARD_PORT` 控制，默认 `127.0.0.1:18084`
 - Combined server 本地端口：由 `NETBIRD_SERVER_PORT` 控制，默认 `127.0.0.1:18085`
 - STUN UDP 公网端口：由 `NETBIRD_STUN_PORT` 控制，默认 `13478/udp`
@@ -111,6 +112,16 @@ NETBIRD_PUBLIC_PORT=443
 NETBIRD_PUBLIC_SCHEME=http
 NETBIRD_PUBLIC_PORT=80
 ```
+
+如果公网入口不是 80/443，例如只能用 `http://netbird.example.com:18084` 访问，那么域名仍填写纯域名，公网端口单独填写：
+
+```bash
+NETBIRD_DOMAIN=netbird.example.com
+NETBIRD_PUBLIC_SCHEME=http
+NETBIRD_PUBLIC_PORT=18084
+```
+
+脚本会把公网地址统一生成成 `http://netbird.example.com:18084`，并同步写入 dashboard API endpoint、OIDC issuer/redirect URI、NetBird server exposed address，以及 OpenResty 的 `Host` / `X-Forwarded-Port` 相关转发头。1Panel 里只需要让该公网端口进入同一个站点，由生成的 `root.conf` 把 `/api/`、`/oauth2/`、gRPC、`/relay` 转到 server，把 `/` 转到 dashboard；不需要再单独给 dashboard 直连暴露一套公网路径。
 
 这个字段控制 NetBird 生成的公网地址、OIDC issuer/redirect URI，以及 OpenResty 的 `X-Forwarded-Proto`。1Panel 只是给站点加证书时，记得同步改成 `https` 并重新生成配置，否则浏览器/客户端看到的 URL 和 NetBird 自己生成的 URL 会不一致。
 

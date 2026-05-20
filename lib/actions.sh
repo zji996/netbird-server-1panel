@@ -166,7 +166,7 @@ doctor_check() {
 
 show_status() {
   info "$(tf status_install_dir "$INSTALL_DIR")"
-  info "$(tf status_domain "$PUBLIC_SCHEME" "$DOMAIN")"
+  info "$(tf status_public_url "$(public_origin)")"
   info "$(tf status_dashboard "$DASHBOARD_PORT")"
   info "$(tf status_server "$SERVER_PORT")"
   info "$(tf status_stun "$STUN_PORT")"
@@ -177,7 +177,7 @@ show_status() {
   fi
   endpoint_check "$(msg endpoint_dashboard)" "http://127.0.0.1:${DASHBOARD_PORT}/"
   endpoint_check "$(msg endpoint_oidc_local)" "http://127.0.0.1:${SERVER_PORT}/oauth2/.well-known/openid-configuration"
-  endpoint_check "$(msg endpoint_oidc_public)" "${PUBLIC_SCHEME}://${DOMAIN}/oauth2/.well-known/openid-configuration"
+  endpoint_check "$(msg endpoint_oidc_public)" "$(public_url /oauth2/.well-known/openid-configuration)"
   if [[ -f "$ONEPANEL_ROOT_CONF" ]]; then
     info "$(tf root_conf_exists "$ONEPANEL_ROOT_CONF")"
   else

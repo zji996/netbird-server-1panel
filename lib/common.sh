@@ -360,7 +360,7 @@ write_admin_credentials() {
   cat > "$TMP_DIR/admin-credentials.txt" <<EOF
 NetBird admin account
 
-URL: ${PUBLIC_SCHEME}://${DOMAIN}
+URL: $(public_origin)
 Email: ${ADMIN_EMAIL}
 Password: ${password}
 EOF

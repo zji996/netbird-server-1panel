@@ -37,7 +37,7 @@ checks = [
     ("127.0.0.1:28085:80", compose),
     ("23478:23478/udp", compose),
     ("./config:/etc/netbird:ro", compose),
-    ('exposedAddress: "https://test.example.invalid:443"', config),
+    ('exposedAddress: "https://test.example.invalid"', config),
     ("- 23478", config),
     ("AUTH_AUTHORITY=https://test.example.invalid/oauth2", env),
 ]
@@ -66,6 +66,50 @@ PY
   [[ -f "$sandbox/config/config.yaml" ]]
   bash "$SCRIPT_PATH" --noninteractive --config "$sandbox/netbird-server.env" 1panel-apply
   rg -n "127\\.0\\.0\\.1:28085|127\\.0\\.0\\.1:28084|grpc_pass" "$sandbox/root.conf" >/dev/null
+
+  local port_sandbox="$TMP_DIR/self-test-public-port"
+  rm -rf "$port_sandbox"
+  mkdir -p "$port_sandbox"
+  cat > "$port_sandbox/netbird-server.env" <<'EOF'
+NETBIRD_DOMAIN=port.example.invalid
+NETBIRD_INSTALL_DIR=/tmp/netbird-server-tui/self-test-public-port
+NETBIRD_DASHBOARD_PORT=33084
+NETBIRD_SERVER_PORT=33085
+NETBIRD_STUN_PORT=33086
+NETBIRD_BIND_ADDRESS=127.0.0.1
+NETBIRD_PUBLIC_SCHEME=http
+NETBIRD_PUBLIC_PORT=18084
+NETBIRD_ADMIN_EMAIL=admin@port.example.invalid
+NETBIRD_1PANEL_ROOT_CONF=/tmp/netbird-server-tui/self-test-public-port/root.conf
+EOF
+  bash "$SCRIPT_PATH" --noninteractive --config "$port_sandbox/netbird-server.env" render
+  bash "$SCRIPT_PATH" --noninteractive --config "$port_sandbox/netbird-server.env" 1panel-apply
+  python3 - "$port_sandbox" <<'PY'
+import pathlib
+import sys
+root = pathlib.Path(sys.argv[1])
+config = (root / "config/config.yaml").read_text()
+env = (root / "dashboard.env").read_text()
+creds = (root / "admin-credentials.txt").read_text()
+root_conf = (root / "root.conf").read_text()
+checks = [
+    ('exposedAddress: "http://port.example.invalid:18084"', config),
+    ('issuer: "http://port.example.invalid:18084/oauth2"', config),
+    ('- "http://port.example.invalid:18084/nb-auth"', config),
+    ("NETBIRD_MGMT_API_ENDPOINT=http://port.example.invalid:18084", env),
+    ("NETBIRD_MGMT_GRPC_API_ENDPOINT=http://port.example.invalid:18084", env),
+    ("AUTH_AUTHORITY=http://port.example.invalid:18084/oauth2", env),
+    ("URL: http://port.example.invalid:18084", creds),
+    ("proxy_set_header Host $http_host;", root_conf),
+    ("proxy_set_header X-Forwarded-Port 18084;", root_conf),
+]
+for needle, haystack in checks:
+    if needle not in haystack:
+        raise SystemExit(f"missing expected public-port content: {needle}")
+for unexpected in ("real-domain", "production-domain"):
+    if unexpected in config + env + creds + root_conf:
+        raise SystemExit("unexpected deployment placeholder leaked into generated test files")
+PY
 
   local profile_sandbox="$TMP_DIR/self-test-profiles"
   rm -rf "$profile_sandbox"
@@ -142,6 +186,18 @@ load_config
 [[ "$PUBLIC_SCHEME" == "http" ]]
 [[ "$PUBLIC_PORT" == "80" ]]
 [[ "$ADMIN_EMAIL" == "admin@netbird.example.com" ]]
+DOMAIN="https://port-from-domain.example.invalid:8443/path"
+PUBLIC_SCHEME="http"
+PUBLIC_PORT="80"
+normalize_domain_public_parts
+[[ "$DOMAIN" == "port-from-domain.example.invalid" ]]
+[[ "$PUBLIC_SCHEME" == "https" ]]
+[[ "$PUBLIC_PORT" == "8443" ]]
+[[ "$(public_origin)" == "https://port-from-domain.example.invalid:8443" ]]
+DOMAIN="portless-https.example.invalid"
+PUBLIC_SCHEME="https"
+PUBLIC_PORT="443"
+[[ "$(public_origin)" == "https://portless-https.example.invalid" ]]
 DOMAIN="cli-domain.example.invalid"
 reload_config_after_cli
 [[ "$ADMIN_EMAIL" == "admin@cli-domain.example.invalid" ]]

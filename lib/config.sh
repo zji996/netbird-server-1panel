@@ -86,6 +86,53 @@ default_public_port() {
   fi
 }
 
+public_hostport() {
+  local default_port
+  default_port="$(default_public_port "$PUBLIC_SCHEME")"
+  if [[ -n "${PUBLIC_PORT:-}" && "$PUBLIC_PORT" != "$default_port" ]]; then
+    printf '%s:%s' "$DOMAIN" "$PUBLIC_PORT"
+  else
+    printf '%s' "$DOMAIN"
+  fi
+}
+
+public_origin() {
+  printf '%s://%s' "$PUBLIC_SCHEME" "$(public_hostport)"
+}
+
+public_url() {
+  local path="${1:-}"
+  printf '%s%s' "$(public_origin)" "$path"
+}
+
+normalize_domain_public_parts() {
+  local value="${DOMAIN:-}"
+  local parsed_scheme="" parsed_port=""
+  local previous_scheme previous_default
+  previous_scheme="${PUBLIC_SCHEME:-http}"
+  previous_default="$(default_public_port "$previous_scheme")"
+
+  if [[ "$value" == *"://"* ]]; then
+    parsed_scheme="${value%%://*}"
+    value="${value#*://}"
+    case "$parsed_scheme" in
+      http|https) PUBLIC_SCHEME="$parsed_scheme" ;;
+    esac
+  fi
+
+  value="${value%%/*}"
+
+  if [[ "$value" =~ ^([^:]+):([0-9]+)$ ]]; then
+    value="${BASH_REMATCH[1]}"
+    parsed_port="${BASH_REMATCH[2]}"
+  fi
+
+  DOMAIN="$value"
+  if [[ -n "$parsed_port" && ( -z "${PUBLIC_PORT:-}" || "${PUBLIC_PORT:-}" == "$previous_default" || "${PUBLIC_PORT:-}" == "$(default_public_port "$PUBLIC_SCHEME")" ) ]]; then
+    PUBLIC_PORT="$parsed_port"
+  fi
+}
+
 list_profiles() {
   local dir
   dir="$(profile_dir)"
@@ -167,6 +214,7 @@ load_config() {
   BIND_ADDRESS="${NETBIRD_BIND_ADDRESS:-${BIND_ADDRESS:-127.0.0.1}}"
   PUBLIC_SCHEME="${NETBIRD_PUBLIC_SCHEME:-${PUBLIC_SCHEME:-http}}"
   PUBLIC_PORT="${NETBIRD_PUBLIC_PORT:-${PUBLIC_PORT:-$(default_public_port "$PUBLIC_SCHEME")}}"
+  normalize_domain_public_parts
   if [[ ${NETBIRD_ADMIN_EMAIL+x} ]]; then
     ADMIN_EMAIL="${NETBIRD_ADMIN_EMAIL:-${ADMIN_EMAIL:-admin@${DOMAIN}}}"
     ADMIN_EMAIL_DERIVED_DEFAULT="false"
@@ -181,6 +229,7 @@ load_config() {
 }
 
 reload_config_after_cli() {
+  normalize_domain_public_parts
   if [[ "${ADMIN_EMAIL_DERIVED_DEFAULT:-false}" == "true" ]]; then
     ADMIN_EMAIL="admin@${DOMAIN}"
   fi

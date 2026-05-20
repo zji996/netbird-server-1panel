@@ -145,6 +145,7 @@ msg() {
     en:rendered_files) echo "Rendered files in %s" ;;
     en:status_install_dir) echo "Install dir: %s" ;;
     en:status_domain) echo "Domain: %s://%s" ;;
+    en:status_public_url) echo "Public URL: %s" ;;
     en:status_dashboard) echo "Dashboard local: http://127.0.0.1:%s" ;;
     en:status_server) echo "Server local: http://127.0.0.1:%s" ;;
     en:status_stun) echo "STUN UDP: %s" ;;
@@ -320,6 +321,7 @@ msg() {
     zh:rendered_files) echo "已生成文件到 %s" ;;
     zh:status_install_dir) echo "安装目录：%s" ;;
     zh:status_domain) echo "域名：%s://%s" ;;
+    zh:status_public_url) echo "对外地址：%s" ;;
     zh:status_dashboard) echo "Dashboard 本地地址：http://127.0.0.1:%s" ;;
     zh:status_server) echo "Server 本地地址：http://127.0.0.1:%s" ;;
     zh:status_stun) echo "STUN UDP：%s" ;;
