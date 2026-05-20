@@ -24,12 +24,39 @@ has_form_tui() {
   [[ -t 0 && "$NONINTERACTIVE" != "true" ]] && command -v dialog >/dev/null 2>&1
 }
 
+dialog_supports_mouse() {
+  [[ "${DIALOG_MOUSE_SUPPORT:-}" == "yes" ]] && return 0
+  [[ "${DIALOG_MOUSE_SUPPORT:-}" == "no" ]] && return 1
+  if dialog --help 2>&1 | grep -q -- '--mouse'; then
+    DIALOG_MOUSE_SUPPORT="yes"
+    return 0
+  fi
+  DIALOG_MOUSE_SUPPORT="no"
+  return 1
+}
+
+dialog_with_title() {
+  local title="$1"; shift
+  local args=(--title "$title")
+  if dialog_supports_mouse; then
+    args=(--mouse "${args[@]}")
+  fi
+  dialog "${args[@]}" "$@"
+}
+
+progress_step() {
+  local current="$1"
+  local total="$2"
+  local label="$3"
+  info "$(tf progress_step "$current" "$total" "$label")"
+}
+
 tui_menu() {
   local title="$1"; shift
   if command -v whiptail >/dev/null 2>&1; then
     whiptail --title "$APP_NAME" --menu "$title" 20 76 10 "$@" 3>&1 1>&2 2>&3
   elif command -v dialog >/dev/null 2>&1; then
-    dialog --title "$APP_NAME" --menu "$title" 20 76 10 "$@" 3>&1 1>&2 2>&3
+    dialog_with_title "$APP_NAME" --menu "$title" 20 76 10 "$@" 3>&1 1>&2 2>&3
   elif command -v fzf >/dev/null 2>&1; then
     local lines=()
     while [[ $# -gt 0 ]]; do
@@ -70,6 +97,9 @@ tui_yesno_choice() {
   elif command -v dialog >/dev/null 2>&1; then
     local args=(--title "$APP_NAME")
     [[ "$default" == "no" ]] && args+=(--defaultno)
+    if dialog_supports_mouse; then
+      args=(--mouse "${args[@]}")
+    fi
     dialog "${args[@]}" --yesno "$message" 12 72
     rc=$?
   else
@@ -98,7 +128,7 @@ tui_input() {
   if command -v whiptail >/dev/null 2>&1; then
     whiptail --title "$APP_NAME" --inputbox "$prompt" 10 72 "$default" 3>&1 1>&2 2>&3
   elif command -v dialog >/dev/null 2>&1; then
-    dialog --title "$APP_NAME" --inputbox "$prompt" 10 72 "$default" 3>&1 1>&2 2>&3
+    dialog_with_title "$APP_NAME" --inputbox "$prompt" 10 72 "$default" 3>&1 1>&2 2>&3
   else
     read -r -p "$prompt [$default] " answer
     printf '%s\n' "${answer:-$default}"
@@ -110,7 +140,7 @@ tui_form() {
   local message="$2"
   shift 2
   if command -v dialog >/dev/null 2>&1; then
-    dialog --title "$APP_NAME" --form "$message" 24 92 14 "$@" 3>&1 1>&2 2>&3
+    dialog_with_title "$APP_NAME" --form "$message" 24 92 14 "$@" 3>&1 1>&2 2>&3
   else
     return 1
   fi
@@ -121,7 +151,7 @@ tui_checklist() {
   if command -v whiptail >/dev/null 2>&1; then
     whiptail --title "$APP_NAME" --checklist "$message" 18 82 8 "$@" 3>&1 1>&2 2>&3
   elif command -v dialog >/dev/null 2>&1; then
-    dialog --title "$APP_NAME" --checklist "$message" 18 82 8 "$@" 3>&1 1>&2 2>&3
+    dialog_with_title "$APP_NAME" --checklist "$message" 18 82 8 "$@" 3>&1 1>&2 2>&3
   else
     return 1
   fi
@@ -132,7 +162,7 @@ tui_radiolist() {
   if command -v whiptail >/dev/null 2>&1; then
     whiptail --title "$APP_NAME" --radiolist "$message" 22 84 10 "$@" 3>&1 1>&2 2>&3
   elif command -v dialog >/dev/null 2>&1; then
-    dialog --title "$APP_NAME" --radiolist "$message" 22 84 10 "$@" 3>&1 1>&2 2>&3
+    dialog_with_title "$APP_NAME" --radiolist "$message" 22 84 10 "$@" 3>&1 1>&2 2>&3
   else
     return 1
   fi
@@ -147,7 +177,7 @@ tui_msgbox() {
   if command -v whiptail >/dev/null 2>&1; then
     whiptail --title "$APP_NAME" --msgbox "$message" 14 76
   elif command -v dialog >/dev/null 2>&1; then
-    dialog --title "$APP_NAME" --msgbox "$message" 14 76
+    dialog_with_title "$APP_NAME" --msgbox "$message" 14 76
   else
     printf '%s\n' "$message"
   fi
@@ -159,7 +189,7 @@ tui_textbox() {
   if command -v whiptail >/dev/null 2>&1; then
     whiptail --title "$title" --textbox "$file" 28 100
   elif command -v dialog >/dev/null 2>&1; then
-    dialog --title "$title" --textbox "$file" 28 100
+    dialog_with_title "$title" --textbox "$file" 28 100
   else
     ${PAGER:-less} "$file"
   fi

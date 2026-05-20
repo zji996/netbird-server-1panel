@@ -1,6 +1,7 @@
 render_files() {
   validate_settings
   require_cmd openssl
+  info "$(msg progress_render_files)"
   local relay_secret encryption_key admin_password
   relay_secret="$(existing_secret_or_new)"
   encryption_key="$(existing_encryption_key_or_new)"
@@ -20,14 +21,17 @@ render_files() {
 
 start_services() {
   require_cmd docker
+  info "$(msg progress_start_services)"
   run_compose up -d
 }
 
 stop_services() {
+  info "$(msg progress_stop_services)"
   run_compose down
 }
 
 restart_services() {
+  info "$(msg progress_restart_services)"
   run_compose up -d --force-recreate
 }
 
@@ -147,6 +151,7 @@ show_logs() {
 
 apply_1panel_conf() {
   validate_settings
+  info "$(msg progress_apply_1panel)"
   render_openresty_root_conf > "$TMP_DIR/root.conf"
   if [[ "$DRY_RUN" == "true" ]]; then
     info "$(tf dry_run_write "$ONEPANEL_ROOT_CONF")"
@@ -222,6 +227,7 @@ open_firewall_ports() {
   local tcp_label
   mapfile -t tcp_ports < <(firewall_tcp_ports)
   tcp_label="$(join_csv "${tcp_ports[@]}")"
+  info "$(tf progress_firewall "$tcp_label" "$udp_port")"
   if [[ "$DRY_RUN" == "true" ]]; then
     info "$(tf firewall_skipped "$tcp_label" "$udp_port")"
     return 0
@@ -280,6 +286,7 @@ local_api_url() {
 setup_initial_admin() {
   require_cmd curl
   require_cmd python3
+  info "$(msg progress_setup_admin)"
   local password
   password="$(admin_password_from_credentials)"
   if [[ -z "$password" ]]; then
@@ -291,8 +298,11 @@ setup_initial_admin() {
   status_url="$(local_api_url /api/instance)"
   setup_url="$(local_api_url /api/setup)"
 
-  local i
-  for i in {1..60}; do
+  local i total=60
+  for ((i = 1; i <= total; i++)); do
+    if (( i == 1 || i % 5 == 0 )); then
+      info "$(tf admin_setup_waiting "$i" "$total" "$status_url")"
+    fi
     body="$(curl -sS --max-time 3 "$status_url" 2>/dev/null || true)"
     if [[ "$body" == *'"setup_required":true'* ]]; then
       payload="$(python3 - "$ADMIN_EMAIL" "$password" <<'PY'
@@ -332,6 +342,7 @@ uninstall_installation() {
     if [[ "$DRY_RUN" == "true" ]]; then
       info "$(tf dry_run_compose_down "$INSTALL_DIR")"
     else
+      info "$(msg progress_stop_services)"
       run_compose down || true
     fi
   fi
@@ -410,5 +421,6 @@ install_flow() {
   open_firewall_ports || true
   start_services
   setup_initial_admin || true
+  info "$(msg progress_status_checks)"
   show_status
 }

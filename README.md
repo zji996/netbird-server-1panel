@@ -45,6 +45,8 @@ chmod +x ./netbird-server-tui.sh
 ./netbird-server-tui.sh
 ```
 
+表单里用上下方向键切换字段，`Tab` 切到 `OK` / `Cancel`，`Enter` 确认。终端支持鼠标时也可以直接点击按钮。完整部署开始后会在终端输出阶段进度；首次拉取 Docker 镜像和等待 NetBird 初始化接口时可能会慢一些。
+
 主菜单默认进入“部署向导”。向导主线是 4 步，选中已有 profile 时会多一个复用捷径页：
 
 1. **选择 profile**：没有 profile 时自动新建；已有 profile 时直接列出，按域名展示，也可以选择「新建 profile」。

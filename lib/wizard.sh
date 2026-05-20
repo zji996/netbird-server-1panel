@@ -128,8 +128,9 @@ wiz_essentials() {
   while true; do
     local previous_domain="$DOMAIN"
     local previous_admin_email="$ADMIN_EMAIL"
-    local values
-    values="$(tui_form "$(msg wizard_essentials_title)" "$(msg wizard_essentials_msg)" \
+    local values message
+    message="$(printf '%s\n\n%s' "$(msg wizard_essentials_msg)" "$(msg form_nav_hint)")"
+    values="$(tui_form "$(msg wizard_essentials_title)" "$message" \
       "$(msg prompt_domain)" 1 1 "$DOMAIN" 1 32 48 0 \
       "$(msg prompt_public_scheme)" 2 1 "$PUBLIC_SCHEME" 2 32 8 0 \
       "$(msg prompt_install_dir)" 3 1 "$INSTALL_DIR" 3 32 48 0)" || return 1
@@ -175,8 +176,9 @@ wiz_advanced_question() {
 wiz_advanced() {
   local profile_default="${ACTIVE_PROFILE:-$(derive_profile_name "$DOMAIN")}"
   while true; do
-    local values
-    values="$(tui_form "$(msg wizard_advanced_title)" "$(msg wizard_advanced_msg)" \
+    local values message
+    message="$(printf '%s\n\n%s' "$(msg wizard_advanced_msg)" "$(msg form_nav_hint)")"
+    values="$(tui_form "$(msg wizard_advanced_title)" "$message" \
       "$(msg prompt_dashboard_port)" 1 1 "$DASHBOARD_PORT" 1 36 8 0 \
       "$(msg prompt_server_port)" 2 1 "$SERVER_PORT" 2 36 8 0 \
       "$(msg prompt_stun_port)" 3 1 "$STUN_PORT" 3 36 8 0 \
@@ -243,19 +245,29 @@ wiz_execute() {
   info "$(msg wizard_executing)"
   case "$action" in
     full)
+      progress_step 1 7 "$(msg progress_save_profile)"
       save_profile_env
+      progress_step 2 7 "$(msg progress_render_files)"
       render_files
+      progress_step 3 7 "$(msg progress_apply_1panel)"
       apply_1panel_conf
+      progress_step 4 7 "$(msg progress_firewall_short)"
       open_firewall_ports || true
+      progress_step 5 7 "$(msg progress_start_services_short)"
       start_services
+      progress_step 6 7 "$(msg progress_setup_admin)"
       setup_initial_admin || true
+      progress_step 7 7 "$(msg progress_status_checks)"
       show_status || true
       ;;
     render)
+      progress_step 1 2 "$(msg progress_save_profile)"
       save_profile_env
+      progress_step 2 2 "$(msg progress_render_files)"
       render_files
       ;;
     save)
+      progress_step 1 1 "$(msg progress_save_profile)"
       save_profile_env
       ;;
   esac
