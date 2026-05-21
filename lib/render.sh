@@ -105,12 +105,15 @@ EOF
 
 render_openresty_root_conf() {
   local hsts_header=""
+  local dashboard_upstream server_upstream
+  dashboard_upstream="$(proxy_upstream_authority "$DASHBOARD_PORT")"
+  server_upstream="$(proxy_upstream_authority "$SERVER_PORT")"
   if [[ "$PUBLIC_SCHEME" == "https" ]]; then
     hsts_header='    add_header Strict-Transport-Security "max-age=31536000";'
   fi
   cat <<EOF
 location ^~ /relay {
-    proxy_pass http://${BIND_ADDRESS}:${SERVER_PORT};
+    proxy_pass http://${server_upstream};
     proxy_http_version 1.1;
     proxy_set_header Upgrade \$http_upgrade;
     proxy_set_header Connection "upgrade";
@@ -124,7 +127,7 @@ location ^~ /relay {
 }
 
 location ^~ /ws-proxy/ {
-    proxy_pass http://${BIND_ADDRESS}:${SERVER_PORT};
+    proxy_pass http://${server_upstream};
     proxy_http_version 1.1;
     proxy_set_header Upgrade \$http_upgrade;
     proxy_set_header Connection "upgrade";
@@ -138,7 +141,7 @@ location ^~ /ws-proxy/ {
 }
 
 location ^~ /signalexchange.SignalExchange/ {
-    grpc_pass grpc://${BIND_ADDRESS}:${SERVER_PORT};
+    grpc_pass grpc://${server_upstream};
     grpc_read_timeout 1d;
     grpc_send_timeout 1d;
     grpc_socket_keepalive on;
@@ -150,7 +153,7 @@ location ^~ /signalexchange.SignalExchange/ {
 }
 
 location ^~ /management.ManagementService/ {
-    grpc_pass grpc://${BIND_ADDRESS}:${SERVER_PORT};
+    grpc_pass grpc://${server_upstream};
     grpc_read_timeout 1d;
     grpc_send_timeout 1d;
     grpc_socket_keepalive on;
@@ -162,7 +165,7 @@ location ^~ /management.ManagementService/ {
 }
 
 location ^~ /management.ProxyService/ {
-    grpc_pass grpc://${BIND_ADDRESS}:${SERVER_PORT};
+    grpc_pass grpc://${server_upstream};
     grpc_read_timeout 1d;
     grpc_send_timeout 1d;
     grpc_socket_keepalive on;
@@ -174,7 +177,7 @@ location ^~ /management.ProxyService/ {
 }
 
 location ^~ /api/ {
-    proxy_pass http://${BIND_ADDRESS}:${SERVER_PORT};
+    proxy_pass http://${server_upstream};
     proxy_set_header Host \$http_host;
     proxy_set_header X-Forwarded-Host \$http_host;
     proxy_set_header X-Forwarded-Port ${PUBLIC_PORT};
@@ -185,7 +188,7 @@ location ^~ /api/ {
 }
 
 location ^~ /oauth2/ {
-    proxy_pass http://${BIND_ADDRESS}:${SERVER_PORT};
+    proxy_pass http://${server_upstream};
     proxy_set_header Host \$http_host;
     proxy_set_header X-Forwarded-Host \$http_host;
     proxy_set_header X-Forwarded-Port ${PUBLIC_PORT};
@@ -196,7 +199,7 @@ location ^~ /oauth2/ {
 }
 
 location ^~ / {
-    proxy_pass http://${BIND_ADDRESS}:${DASHBOARD_PORT};
+    proxy_pass http://${dashboard_upstream};
     proxy_set_header Host \$http_host;
     proxy_set_header X-Forwarded-Host \$http_host;
     proxy_set_header X-Forwarded-Port ${PUBLIC_PORT};

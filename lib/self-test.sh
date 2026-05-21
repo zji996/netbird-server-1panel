@@ -76,7 +76,7 @@ NETBIRD_INSTALL_DIR=/tmp/netbird-server-tui/self-test-public-port
 NETBIRD_DASHBOARD_PORT=33084
 NETBIRD_SERVER_PORT=33085
 NETBIRD_STUN_PORT=33086
-NETBIRD_BIND_ADDRESS=127.0.0.1
+NETBIRD_BIND_ADDRESS=0.0.0.0
 NETBIRD_PUBLIC_SCHEME=http
 NETBIRD_PUBLIC_PORT=18084
 NETBIRD_ADMIN_EMAIL=admin@port.example.invalid
@@ -102,6 +102,8 @@ checks = [
     ("URL: http://port.example.invalid:18084", creds),
     ("proxy_set_header Host $http_host;", root_conf),
     ("proxy_set_header X-Forwarded-Port 18084;", root_conf),
+    ("proxy_pass http://127.0.0.1:33084;", root_conf),
+    ("proxy_pass http://127.0.0.1:33085;", root_conf),
 ]
 for needle, haystack in checks:
     if needle not in haystack:
@@ -130,7 +132,7 @@ SERVER_PORT="34085"
 STUN_PORT="34086"
 BIND_ADDRESS="127.0.0.1"
 ADMIN_EMAIL="admin@apply.example.invalid"
-ONEPANEL_ROOT_CONF="$INSTALL_DIR/root.conf"
+ONEPANEL_ROOT_CONF="$INSTALL_DIR/www/sites/apply.example.invalid/proxy/root.conf"
 PATH="$NETBIRD_TEST_APPLY_DIR/bin:$PATH"
 cat > "$NETBIRD_TEST_APPLY_DIR/bin/docker" <<'SH'
 #!/usr/bin/env bash
@@ -157,6 +159,8 @@ apply_1panel_conf
 rg -q "exec 1panel-openresty nginx -t" "$NETBIRD_TEST_APPLY_DIR/docker.log"
 rg -q "exec 1panel-openresty nginx -s reload" "$NETBIRD_TEST_APPLY_DIR/docker.log"
 rg -q "X-Forwarded-Port 34180" "$ONEPANEL_ROOT_CONF"
+[[ -d "$INSTALL_DIR/www/sites/apply.example.invalid/log" ]]
+[[ -f "$INSTALL_DIR/www/sites/apply.example.invalid/log/access.log" ]]
 EOF
 
   local profile_sandbox="$TMP_DIR/self-test-profiles"

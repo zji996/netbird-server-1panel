@@ -105,6 +105,22 @@ public_url() {
   printf '%s%s' "$(public_origin)" "$path"
 }
 
+proxy_upstream_host() {
+  case "${BIND_ADDRESS:-127.0.0.1}" in
+    0.0.0.0|"::"|"[::]"|"*") printf '127.0.0.1' ;;
+    *) printf '%s' "$BIND_ADDRESS" ;;
+  esac
+}
+
+proxy_upstream_authority() {
+  local host port="$1"
+  host="$(proxy_upstream_host)"
+  if [[ "$host" == *:* && "$host" != \[*\] ]]; then
+    host="[$host]"
+  fi
+  printf '%s:%s' "$host" "$port"
+}
+
 normalize_domain_public_parts() {
   local value="${DOMAIN:-}"
   local parsed_scheme="" parsed_port=""

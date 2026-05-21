@@ -2,6 +2,7 @@ render_files() {
   validate_settings
   require_cmd openssl
   info "$(msg progress_render_files)"
+  warn_if_privileged_path_needed "$INSTALL_DIR"
   local relay_secret encryption_key admin_password
   relay_secret="$(existing_secret_or_new)"
   encryption_key="$(existing_encryption_key_or_new)"
@@ -192,13 +193,14 @@ show_logs() {
 apply_1panel_conf() {
   validate_settings
   info "$(msg progress_apply_1panel)"
+  warn_if_privileged_path_needed "$ONEPANEL_ROOT_CONF"
   render_openresty_root_conf > "$TMP_DIR/root.conf"
   if [[ "$DRY_RUN" == "true" ]]; then
     info "$(tf dry_run_write "$ONEPANEL_ROOT_CONF")"
     cat "$TMP_DIR/root.conf"
     return 0
   fi
-  maybe_sudo mkdir -p "$(dirname "$ONEPANEL_ROOT_CONF")"
+  prepare_onepanel_site_dirs
   if [[ -f "$ONEPANEL_ROOT_CONF" ]]; then
     local backup="${ONEPANEL_ROOT_CONF}.bak.$(date +%Y%m%d%H%M%S)"
     info "$(tf backup_file "$ONEPANEL_ROOT_CONF" "$backup")"
@@ -208,6 +210,45 @@ apply_1panel_conf() {
   info "$(tf wrote_file "$ONEPANEL_ROOT_CONF")"
   [[ "${NETBIRD_SKIP_OPENRESTY_RELOAD:-false}" == "true" ]] && return 0
   reload_openresty_if_possible || true
+}
+
+nearest_existing_parent() {
+  local path="$1"
+  while [[ ! -e "$path" && "$path" != "/" ]]; do
+    path="$(dirname "$path")"
+  done
+  printf '%s' "$path"
+}
+
+warn_if_privileged_path_needed() {
+  [[ "${EUID:-$(id -u)}" -eq 0 ]] && return 0
+  local path="$1" parent
+  parent="$(nearest_existing_parent "$path")"
+  if [[ ! -w "$parent" ]]; then
+    warn "$(tf sudo_required_hint "$path")"
+  fi
+}
+
+onepanel_site_log_dir() {
+  local proxy_dir site_dir
+  proxy_dir="$(dirname "$ONEPANEL_ROOT_CONF")"
+  if [[ "$(basename "$proxy_dir")" != "proxy" ]]; then
+    return 0
+  fi
+  site_dir="$(dirname "$proxy_dir")"
+  printf '%s/log' "$site_dir"
+}
+
+prepare_onepanel_site_dirs() {
+  local root_dir log_dir
+  root_dir="$(dirname "$ONEPANEL_ROOT_CONF")"
+  maybe_sudo mkdir -p "$root_dir"
+  log_dir="$(onepanel_site_log_dir)"
+  if [[ -n "$log_dir" ]]; then
+    maybe_sudo mkdir -p "$log_dir"
+    maybe_sudo touch "$log_dir/access.log" "$log_dir/error.log"
+    info "$(tf onepanel_log_dir_ready "$log_dir")"
+  fi
 }
 
 openresty_container() {

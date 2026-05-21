@@ -176,6 +176,8 @@ msg() {
     en:root_conf_missing) echo "1Panel root.conf not found: %s" ;;
     en:wrote_file) echo "Wrote %s" ;;
     en:root_conf_contains) echo "root.conf contains:" ;;
+    en:sudo_required_hint) echo "Path %s may require root permission. If the next write fails, rerun this command with sudo." ;;
+    en:onepanel_log_dir_ready) echo "Ensured 1Panel site log directory: %s" ;;
     en:checking_openresty) echo "Checking OpenResty container: %s" ;;
     en:no_openresty) echo "No running OpenResty container detected. You can reload it from 1Panel after applying root.conf." ;;
     en:openresty_test_failed) echo "OpenResty config test failed in container %s. Please check the nginx -t output above." ;;
@@ -357,6 +359,8 @@ msg() {
     zh:root_conf_missing) echo "未找到 1Panel root.conf：%s" ;;
     zh:wrote_file) echo "已写入 %s" ;;
     zh:root_conf_contains) echo "root.conf 包含：" ;;
+    zh:sudo_required_hint) echo "路径 %s 可能需要 root 权限；如果后续写入失败，请用 sudo 重新运行本命令。" ;;
+    zh:onepanel_log_dir_ready) echo "已确保 1Panel 站点日志目录：%s" ;;
     zh:checking_openresty) echo "正在检查 OpenResty 容器：%s" ;;
     zh:no_openresty) echo "未检测到运行中的 OpenResty 容器。写入 root.conf 后可在 1Panel 中重载。" ;;
     zh:openresty_test_failed) echo "OpenResty 容器 %s 配置检查失败，请查看上面的 nginx -t 输出。" ;;
